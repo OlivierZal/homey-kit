@@ -1,0 +1,17 @@
+# Calls the family's reusable CI (library gates on).
+jobs:
+  ci:
+    permissions:
+      contents: read
+      packages: read
+    secrets: inherit
+    uses: OlivierZal/configs/.github/workflows/reusable-ci.yml@v1.0.0
+    with:
+      run-lint-package: true
+name: CI
+on:
+  merge_group: {}
+  pull_request: {}
+  push:
+    branches: [main]
+permissions: {}

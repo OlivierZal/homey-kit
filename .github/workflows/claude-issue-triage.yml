@@ -1,0 +1,14 @@
+# Calls the family workflow of the same name in OlivierZal/configs.
+jobs:
+  triage:
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    secrets: inherit
+    uses: OlivierZal/configs/.github/workflows/claude-issue-triage.yml@v1.0.0
+name: claude-issue-triage
+on:
+  issues:
+    types: [opened]
+permissions: {}

@@ -1,0 +1,14 @@
+# Calls the family reusable audit weekly.
+jobs:
+  audit:
+    permissions:
+      contents: read
+      packages: read
+    secrets: inherit
+    uses: OlivierZal/configs/.github/workflows/reusable-audit.yml@v1.0.0
+name: Audit
+on:
+  schedule:
+    - cron: '35 6 * * 1'
+  workflow_dispatch: {}
+permissions: {}

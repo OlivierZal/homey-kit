@@ -1,0 +1,24 @@
+registries:
+  npm-github:
+    token: ${{ secrets.MY_GITHUB_PERSONAL_TOKEN }}
+    type: npm-registry
+    url: https://npm.pkg.github.com
+updates:
+  - commit-message:
+      prefix: build(deps)
+      prefix-development: build(deps-dev)
+    directory: /
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    package-ecosystem: npm
+    registries: [npm-github]
+    schedule:
+      interval: weekly
+  - commit-message:
+      prefix: ci
+    directory: /
+    package-ecosystem: github-actions
+    schedule:
+      interval: weekly
+version: 2

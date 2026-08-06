@@ -1,0 +1,16 @@
+# Calls the family workflow of the same name in OlivierZal/configs.
+jobs:
+  zizmor:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    secrets: inherit
+    uses: OlivierZal/configs/.github/workflows/zizmor.yml@v1.0.0
+name: zizmor
+on:
+  merge_group: {}
+  pull_request: {}
+  push:
+    branches: [main]
+permissions: {}

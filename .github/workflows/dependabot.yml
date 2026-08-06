@@ -1,0 +1,12 @@
+# Calls the family workflow of the same name in OlivierZal/configs.
+jobs:
+  dependabot:
+    permissions:
+      contents: write
+      pull-requests: write
+    secrets: inherit
+    uses: OlivierZal/configs/.github/workflows/dependabot.yml@v1.0.0
+name: dependabot
+on:
+  pull_request: {}
+permissions: {}

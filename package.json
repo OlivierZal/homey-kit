@@ -1,0 +1,98 @@
+{
+  "name": "@olivierzal/homey-kit",
+  "version": "0.0.0",
+  "description": "Shared Homey runtime for the OlivierZal apps: webview kit, settings transport, common helpers, table-driven test kernels",
+  "keywords": [
+    "homey",
+    "webview",
+    "settings"
+  ],
+  "homepage": "https://github.com/OlivierZal/homey-kit#readme",
+  "bugs": {
+    "url": "https://github.com/OlivierZal/homey-kit/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OlivierZal/homey-kit.git"
+  },
+  "license": "MIT",
+  "author": "Olivier Zalmanski",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/webview-hashes.d.ts",
+      "default": "./dist/node/webview-hashes.js"
+    },
+    "./settings": {
+      "types": "./dist/settings/callback-api.d.ts",
+      "default": "./dist/settings/callback-api.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/homey.d.ts",
+      "default": "./dist/types/homey.js"
+    },
+    "./webview": {
+      "types": "./dist/webview/index.d.ts",
+      "default": "./dist/webview/index.js"
+    }
+  },
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "node ./node_modules/@typescript/native/bin/tsc --project tsconfig.build.json",
+    "format": "prettier . --check",
+    "format:fix": "prettier . --write",
+    "lint": "node --max-old-space-size=8192 ./node_modules/eslint/bin/eslint.js .",
+    "lint:fix": "npm run lint -- --fix",
+    "lint:package": "npm run build && publint --strict",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run typecheck && npm run lint && npm run format",
+    "test": "vitest run",
+    "test:coverage": "npm test -- --coverage",
+    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit"
+  },
+  "devDependencies": {
+    "@olivierzal/configs": "1.0.0",
+    "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12",
+    "@types/node": "^25.5.1",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/coverage-v8": "^4.1.7",
+    "eslint": "^10.8.0",
+    "homey-apps-sdk-v3-types": "^0.3.12",
+    "jiti": "^2.6.1",
+    "prettier": "^3.9.6",
+    "publint": "^0.3.14",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.7"
+  },
+  "peerDependencies": {
+    "homey-apps-sdk-v3-types": "^0.3.12",
+    "vitest": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "homey-apps-sdk-v3-types": {
+      "optional": false
+    },
+    "vitest": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

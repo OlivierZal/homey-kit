@@ -1,0 +1,12 @@
+# Calls the family workflow of the same name in OlivierZal/configs.
+jobs:
+  pr_title:
+    permissions:
+      pull-requests: read
+    secrets: inherit
+    uses: OlivierZal/configs/.github/workflows/pr-title.yml@v1.0.0
+name: pr-title
+on:
+  pull_request:
+    types: [edited, opened, reopened, synchronize]
+permissions: {}

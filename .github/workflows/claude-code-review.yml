@@ -1,0 +1,14 @@
+# Calls the family workflow of the same name in OlivierZal/configs.
+jobs:
+  review:
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    secrets: inherit
+    uses: OlivierZal/configs/.github/workflows/claude-code-review.yml@v1.0.0
+name: claude-code-review
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+permissions: {}

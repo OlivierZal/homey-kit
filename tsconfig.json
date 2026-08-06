@@ -1,0 +1,6 @@
+{
+  "compilerOptions": { "lib": ["DOM", "DOM.Iterable", "ESNext"] },
+  "exclude": ["tests/fixtures"],
+  "extends": "@olivierzal/configs/tsconfig/library",
+  "include": ["*.config.ts", "src", "tests"]
+}

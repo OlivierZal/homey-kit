@@ -1,0 +1,1 @@
+{ "api": { "updateThing": { "method": "PUT", "path": "/thing/:id" } } }
