@@ -160,8 +160,18 @@ const refetchOnce = (
   return refetchDocument(identity, report)
 }
 
-// Returns whether a refetch was issued — the caller must then skip its
-// own init: the document is about to be replaced.
+/**
+ * Compares the booted page's `?v=` identity against the app-served live
+ * hashes and refetches the document ONCE through a never-cached address
+ * on mismatch. Every failure path stays open (unstamped page,
+ * unreachable route, unknown entry, denied storage): a wrong guess must
+ * never take a working webview down.
+ * @param entry - The page's key in the served hash manifest.
+ * @param fetchHashes - Bridge call returning the live hashes; the transport is the caller's.
+ * @param report - Optional diagnostics sink receiving each refetch decision.
+ * @returns Whether a refetch was issued — the caller must then skip its own init: the document is about to be replaced.
+ * @category Webview
+ */
 export const ensureFreshWebview = async (
   entry: string,
   fetchHashes: () => Promise<Partial<Record<string, string>>>,

@@ -6,6 +6,12 @@
 // in `createRouteGuardSuite`.
 import { describe, expect, it } from 'vitest'
 
+/**
+ * One API surface under contract: its exposed handlers, its manifest
+ * declaration and a display name for the failure output.
+ * @template THandler - The app's handler union.
+ * @category Testing
+ */
 export interface ContractSurface<THandler> {
   readonly api: Record<string, THandler>
   readonly config: { readonly api: Record<string, unknown> }
@@ -20,6 +26,7 @@ const sortedKeys = (object: object): string[] =>
  * @param surface - The handler object, manifest and display name.
  * @returns The two sorted key lists when they diverge, `null` when the
  * surface is clean.
+ * @category Testing
  */
 export const findContractBreach = (
   surface: ContractSurface<unknown>,
@@ -34,6 +41,7 @@ export const findContractBreach = (
 /**
  * Generates the family's contract suite over the caller's surfaces.
  * @param surfaces - One entry per API surface the app ships.
+ * @category Testing
  */
 export const createApiContractSuite = <THandler extends CallableFunction>(
   surfaces: readonly ContractSurface<THandler>[],

@@ -1,3 +1,9 @@
+/**
+ * Table-driven test kernels, single-sourced: each app supplies its
+ * surface tables and gets the family's API-contract and route-guard
+ * suites generated over them.
+ * @packageDocumentation
+ */
 export {
   type ContractSurface,
   createApiContractSuite,

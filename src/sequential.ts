@@ -4,6 +4,7 @@
  * so those callers chain them; plain value writes stay concurrent.
  * @param items - Elements fed through `run`, one at a time in iteration order.
  * @param run - Async operation applied to each element; its promise settles before the next element starts.
+ * @category Utilities
  */
 export const sequential = async <T>(
   items: readonly T[],

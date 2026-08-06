@@ -8,6 +8,7 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     uses: OlivierZal/configs/.github/workflows/reusable-ci.yml@140fc08403302560b9ae86c2aa7970ffe88e7c71 # v1.1.0
     with:
+      run-docs: true
       run-lint-package: true
 name: CI
 on:

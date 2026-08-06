@@ -11,11 +11,22 @@ import { readdir, readFile } from 'node:fs/promises'
 
 import { describe, expect, it } from 'vitest'
 
+/**
+ * One manifest-declared route, the unit every swept call site must
+ * match under its own method.
+ * @category Testing
+ */
 export interface DeclaredRoute {
   readonly method: string
   readonly path: string
 }
 
+/**
+ * The route-guard analysis verdict: undeclared calls by kind, plus the
+ * call-site accounting that turns a broken extractor into a failure
+ * instead of a silent pass.
+ * @category Testing
+ */
 export interface RouteGuardFindings {
   readonly accountedCallSites: number
   readonly parsedOrIndirectCalls: number
@@ -24,6 +35,11 @@ export interface RouteGuardFindings {
   readonly undeclaredTemplateCalls: readonly string[]
 }
 
+/**
+ * One webview surface to sweep: its manifest and the source directories
+ * whose `homeyApi*` call sites the guard must account for.
+ * @category Testing
+ */
 export interface Surface {
   readonly manifest: string
   readonly name: string
@@ -311,6 +327,7 @@ const countAll = (sources: readonly string[], pattern: RegExp): number =>
  * accounting mean the surface is clean.
  * @param surface - The manifest path, display name and source dirs.
  * @returns The undeclared calls and the call-site accounting.
+ * @category Testing
  */
 export const analyzeRouteGuards = async (
   surface: Surface,
@@ -343,6 +360,7 @@ export const analyzeRouteGuards = async (
 /**
  * Generates the family's route-guard suite over the caller's surfaces.
  * @param surfaces - One entry per webview surface the app ships.
+ * @category Testing
  */
 export const createRouteGuardSuite = (surfaces: readonly Surface[]): void => {
   describe('api route guards', () => {
