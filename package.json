@@ -83,7 +83,7 @@
   },
   "peerDependenciesMeta": {
     "homey-apps-sdk-v3-types": {
-      "optional": false
+      "optional": true
     },
     "vitest": {
       "optional": true
