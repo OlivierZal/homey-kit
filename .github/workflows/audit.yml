@@ -4,8 +4,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    secrets: inherit
-    uses: OlivierZal/configs/.github/workflows/reusable-audit.yml@v1.0.0
+    uses: OlivierZal/configs/.github/workflows/reusable-audit.yml@140fc08403302560b9ae86c2aa7970ffe88e7c71 # v1.1.0
 name: Audit
 on:
   schedule:

@@ -2,6 +2,6 @@
   "js/ts.tsdk.path": "node_modules/@typescript/native",
   "sonarlint.connectedMode.project": {
     "connectionId": "olivierzal",
-    "projectKey": "OlivierZal_melcloud-api"
+    "projectKey": "OlivierZal_homey-kit"
   }
 }
