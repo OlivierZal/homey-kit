@@ -52,6 +52,7 @@
   ],
   "scripts": {
     "build": "node ./node_modules/@typescript/native/bin/tsc --project tsconfig.build.json",
+    "docs": "typedoc",
     "format": "prettier . --check",
     "format:fix": "prettier . --write",
     "lint": "node --max-old-space-size=8192 ./node_modules/eslint/bin/eslint.js .",
@@ -74,6 +75,9 @@
     "jiti": "^2.6.1",
     "prettier": "^3.9.6",
     "publint": "^0.3.14",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-coverage": "^4.0.3",
+    "typedoc-plugin-mdn-links": "^5.1.1",
     "typescript": "~6.0.3",
     "vitest": "^4.1.7"
   },

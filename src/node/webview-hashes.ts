@@ -1,9 +1,10 @@
-// The live webview-bundle hashes, emitted by `scripts/bundle.mts` into
-// the packaged app at stamping time: `GET /webview-hashes` serves them
-// so a booted page can compare its own `?v=` and reload itself once
-// when the phone webview cache served a stale copy. Outside the
-// packaged flow (dev suite runs) the manifest is absent — an empty map,
-// and every page treats itself as fresh.
+/**
+ * Node-side reader of the packaged webview-hash manifest, emitted by
+ * the consuming app's bundler at stamping time: `GET /webview-hashes`
+ * serves it so a booted page can compare its own `?v=` identity and
+ * refetch itself once when the phone webview cache served a stale copy.
+ * @packageDocumentation
+ */
 import { readFile } from 'node:fs/promises'
 
 const isStringRecord = (
@@ -44,8 +45,14 @@ const cache: { value: Promise<Partial<Record<string, string>>> | null } = {
   value: null,
 }
 
-// The optional URL is the test seam; the bare call the route handler
-// makes reads (and caches) the packaged manifest next to the app root.
+/**
+ * Reads the packaged manifest; outside the packaged flow (dev suite
+ * runs) it is absent and the empty map means every page treats itself
+ * as fresh.
+ * @param manifestUrl - Test seam; the bare call the route handler makes reads (and caches) the manifest next to the app root.
+ * @returns The page-entry → live-identity map.
+ * @category Node
+ */
 export const getWebviewHashes = async (
   manifestUrl?: URL,
 ): Promise<Partial<Record<string, string>>> => {

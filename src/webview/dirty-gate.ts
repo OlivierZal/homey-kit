@@ -9,32 +9,86 @@
 // (a pure snapshot or a domain predicate, exclusively).
 // Single-sourced here for every consuming Homey app.
 
+/**
+ * The live handle a call site drives its gated form region with.
+ * @category Webview
+ */
 export interface DirtyGate {
+  /**
+   * Re-snapshots the baseline after a (re)populate or successful save,
+   * dropping Apply back to greyed; in predicate mode there is no
+   * baseline to move, so it only re-evaluates.
+   */
   readonly markSaved: () => void
+  /**
+   * Re-evaluates arming after a programmatic field write, which fires
+   * no `input` event for {@link DirtyGate.wire} to catch.
+   */
   readonly recompute: () => void
+  /**
+   * Routes a request through the busy window: freezes the region, runs
+   * the action, and releases only if no newer action claimed the gate
+   * since.
+   */
   readonly runBusy: (action: () => Promise<void>) => Promise<void>
+  /**
+   * Manually flips the busy freeze, for call sites whose lifecycle
+   * cannot be expressed as one {@link DirtyGate.runBusy} action.
+   */
   readonly setBusy: (isBusy: boolean) => void
+  /**
+   * Subscribes arming re-evaluation to `change` and `input` on the
+   * controls the arming source reads.
+   */
   readonly wire: (targets: readonly EventTarget[]) => void
 }
 
-// Arming comes from exactly ONE source. Baseline mode: `serialize` is a
-// PURE snapshot of the form's current values — never a request-body
-// builder: those filter defaults and null deltas out, which desyncs the
-// pristine check — and Apply arms when the snapshot diverges from the
-// saved baseline. Predicate mode: when the wire protocol cannot express
-// every form divergence (an emptied field means "no instruction" and is
-// omitted from the request), supply `isActionable` instead — Apply arms
-// only when pressing it would send something, and no baseline exists to
-// retain stale form state. The pair is exclusive by type: a predicate
-// site has no use for a baseline (the predicate would short-circuit it
-// into dead weight).
+/**
+ * Gate wiring: the owned buttons and frozen regions, plus exactly ONE
+ * arming source — a pure snapshot (baseline mode) or a domain predicate
+ * (predicate mode). The pair is exclusive by type: a predicate site has
+ * no use for a baseline, which the predicate would short-circuit into
+ * dead weight that retains stale form state.
+ * @category Webview
+ */
 export type DirtyGateOptions = {
+  /**
+   * The Apply button this gate owns and greys.
+   */
   readonly applyElement: HTMLButtonElement
+  /**
+   * Regions frozen while a request is in flight. Every region the
+   * arming source reads must be listed: each success path rewrites the
+   * fields, so an edit slipped in mid-flight would otherwise be
+   * silently clobbered when the response lands.
+   */
   readonly fieldsetElements?: readonly HTMLFieldSetElement[]
+  /**
+   * Sibling Refresh buttons, greyed by busy alone — never by pristine,
+   * so they stay the escape hatch on an untouched form.
+   */
   readonly refreshElements?: readonly HTMLButtonElement[]
 } & (
-  | { readonly isActionable?: undefined; readonly serialize: () => string }
-  | { readonly serialize?: undefined; readonly isActionable: () => boolean }
+  | {
+      readonly isActionable?: undefined
+      /**
+       * Baseline mode: a PURE snapshot of the form's current values —
+       * never a request-body builder, whose filtered defaults and null
+       * deltas would desync the pristine check. Apply arms when the
+       * snapshot diverges from the saved baseline.
+       */
+      readonly serialize: () => string
+    }
+  | {
+      readonly serialize?: undefined
+      /**
+       * Predicate mode: arms Apply only when pressing it would send
+       * something — for wire protocols that cannot express every form
+       * divergence (an emptied field means "no instruction" and is
+       * omitted from the request).
+       */
+      readonly isActionable: () => boolean
+    }
 )
 
 // Predicate mode consults the domain judgment; baseline mode diffs the
@@ -75,18 +129,18 @@ const setFrozen = (
   }
 }
 
-// The gate evaluates its arming at creation: in baseline mode Apply
-// starts greyed even when no data ever loads (the form matches its own
-// snapshot), in predicate mode it starts wherever `isActionable` puts
-// it — a prefilled form may legitimately arm at once. Call `markSaved`
-// after every (re)populate and
-// successful save (in predicate mode it only re-evaluates — there is no
-// baseline to move), `recompute` after any programmatic field write (no
-// `input` event fires for those), `wire` on the controls the arming
-// source reads, and route every request through `runBusy`. Buttons grey
-// through native `disabled` (not a CSS class): it blocks keyboard
-// activation during in-flight actions and is announced by screen
-// readers.
+/**
+ * Builds the gate over a form region. Arming is evaluated at creation:
+ * baseline mode starts greyed even when no data ever loads (the form
+ * matches its own snapshot); predicate mode starts wherever
+ * `isActionable` puts it — a prefilled form may legitimately arm at
+ * once. Buttons grey through native `disabled` (not a CSS class): it
+ * blocks keyboard activation during in-flight actions and is announced
+ * by screen readers.
+ * @param options - Buttons, frozen regions and the single arming source.
+ * @returns The live gate handle.
+ * @category Webview
+ */
 export const createDirtyGate = (options: DirtyGateOptions): DirtyGate => {
   const { applyElement, fieldsetElements = [], refreshElements = [] } = options
   let busyGeneration = 0
