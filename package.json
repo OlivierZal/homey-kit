@@ -65,7 +65,7 @@
     "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit"
   },
   "devDependencies": {
-    "@olivierzal/configs": "1.0.0",
+    "@olivierzal/configs": "1.2.0",
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12",
     "@types/node": "^25.5.1",
     "@typescript/native": "npm:typescript@^7.0.2",
