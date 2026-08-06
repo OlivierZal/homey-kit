@@ -17,6 +17,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-node-and-install
         with:
+          cache: none
           # Unlike the API libs, this package installs @olivierzal
           # dependencies, so the install needs packages:read auth.
           npm-token: ${{ secrets.GITHUB_TOKEN }}
