@@ -33,7 +33,7 @@ range.
 
 | Import                           | Contents                                                                                                                      |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `sequential`                                                |
+| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `selectChangelogEntries`, `sequential`                      |
 | `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity` |
 | `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                        |
 | `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                     |
@@ -188,6 +188,34 @@ join of its `?v=` stamps. Displaying it answers "am I looking at a
 cached page?" at a glance, which the app version cannot: phone webviews
 cache assets across app versions, so the version on screen says nothing
 about the bundle behind it.
+
+## Announcing skipped versions
+
+An app notifies the changelog on boot and stores the version it
+announced. Selecting only the running version means a user who updates
+rarely never hears about the releases in between, so
+`selectChangelogEntries` walks the stored version up to the running one:
+
+```ts title="app"
+const { entries, omitted } = selectChangelogEntries({
+  changelog,
+  from: this.homey.settings.get('notifiedVersion'),
+  language: this.homey.i18n.getLanguage(),
+  to: this.homey.manifest.version,
+})
+```
+
+`entries` is chronological — announce it in that order. A first install
+(no readable `from`) yields only the running version, never the whole
+history; a downgrade yields nothing. Each version falls back to English
+when the user's language is missing, and a version translated into
+neither drops out of the series instead of ending it. Beyond five
+versions only the most recent are returned, the rest counted in
+`omitted` so the caller can say so rather than drop them silently.
+
+Emission stays in the app: `createNotification` and the
+`notifiedVersion` write are SDK-coupled, and only the selection is
+shared.
 
 ## What belongs here
 
