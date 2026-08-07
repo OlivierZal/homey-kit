@@ -1,6 +1,9 @@
 import { type Mock, afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ensureFreshWebview } from '../../src/webview/webview-freshness.ts'
+import {
+  ensureFreshWebview,
+  getPageIdentity,
+} from '../../src/webview/webview-freshness.ts'
 
 // The helper reads narrow slices of the page (its stamped references,
 // sessionStorage, location), so plain doubles installed on globalThis
@@ -278,5 +281,23 @@ describe(ensureFreshWebview, () => {
     expect(report).toHaveBeenCalledWith(
       'Stale webview refetch could not navigate: page cccc0000.00000000',
     )
+  })
+})
+
+describe(getPageIdentity, () => {
+  afterEach(() => {
+    delete globals.document
+  })
+
+  it('should join the stamps in document order', () => {
+    install({ references: STALE_PAGE })
+
+    expect(getPageIdentity()).toBe('cccc0000.00000000')
+  })
+
+  it('should report no identity on an unstamped page', () => {
+    install({ references: [] })
+
+    expect(getPageIdentity()).toBeNull()
   })
 })

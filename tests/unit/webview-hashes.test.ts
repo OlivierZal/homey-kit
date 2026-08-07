@@ -7,10 +7,11 @@ const fixture = (name: string): URL =>
 
 describe(getWebviewHashes, () => {
   it('should serve an empty map when no manifest is packaged', async () => {
-    // The bare call reads next to the app root, where a dev suite run
-    // has no manifest; the second call exercises the cache.
-    await expect(getWebviewHashes()).resolves.toStrictEqual({})
-    await expect(getWebviewHashes()).resolves.toStrictEqual({})
+    // Outside the packaged flow the manifest is absent, and the empty
+    // map means every page treats itself as fresh.
+    await expect(
+      getWebviewHashes(fixture('absent.json')),
+    ).resolves.toStrictEqual({})
   })
 
   it('should serve the packaged manifest', async () => {

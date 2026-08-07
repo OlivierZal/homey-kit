@@ -34,7 +34,7 @@ range.
 | Import                           | Contents                                                                                               |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `sequential`                         |
-| `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `ensureFreshWebview`                      |
+| `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `ensureFreshWebview`, `getPageIdentity`   |
 | `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm` |
 | `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves              |
 | `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation            |
@@ -43,25 +43,42 @@ range.
 ## Wiring the type augmentations
 
 Module augmentation cannot ship in a package; each app keeps a local
-`homey-override.d.ts` and extends the generics:
+`homey-override.d.ts`. Extend the SDK interfaces and take the narrowed
+member SIGNATURES from the generics — do not extend the generics
+directly:
 
 ```ts title="homey-override"
+import type HomeyLib from 'homey/lib/Homey.js'
+
 import type {
   TypedManagerDrivers,
   TypedManagerSettings,
 } from '@olivierzal/homey-kit/types'
 import type MyApp from './app.mts'
-import type { HomeySettings } from './types.mts'
-import type { MyDriver } from './types.mts'
+import type { HomeySettings, MyDriver } from './types.mts'
 
 declare module 'homey' {
-  interface Homey {
+  interface Homey extends HomeyLib {
     app: MyApp
   }
-  interface ManagerDrivers extends TypedManagerDrivers<MyDriver> {}
-  interface ManagerSettings extends TypedManagerSettings<HomeySettings> {}
+  interface ManagerDrivers extends HomeyLib.ManagerDrivers {
+    getDrivers: TypedManagerDrivers<MyDriver>['getDrivers']
+  }
+  interface ManagerSettings extends HomeyLib.ManagerSettings {
+    get: TypedManagerSettings<HomeySettings>['get']
+    set: TypedManagerSettings<HomeySettings>['set']
+  }
 }
 ```
+
+`interface ManagerDrivers extends TypedManagerDrivers<MyDriver> {}` is a
+trap, measured on two apps: without `HomeyLib.ManagerDrivers` the
+interface loses `log`, `error`, `getDriver` and 14 more members; adding
+both parents makes each declare `getDrivers`, and TypeScript resolves
+the conflict **silently** towards the SDK's wide type — `getDrivers()`
+hands back `Device[]` where the app expects `MyDriver[]`, with no error
+anywhere. Picking the members keeps one declaration site per member, so
+a future divergence is a compile error rather than a silent widening.
 
 ## Wiring the test kernels
 
@@ -85,6 +102,33 @@ createApiContractSuite<Handler>([{ api, config: appConfig, name: 'app API' }])
 
 The `Handler` type parameter is the compile-time half of the contract:
 the call only typechecks when the whole handler union is callable.
+
+## Wiring the freshness handshake
+
+The manifest URL is required: it sits where the app's own bundler
+stamped it, which no path relative to this package can reach. Bind it
+once, app-side, and serve it from the route the pages call:
+
+```ts title="lib/webview-hashes"
+import { getWebviewHashes } from '@olivierzal/homey-kit/node'
+
+const MANIFEST_URL = new URL('../webview-hashes.json', import.meta.url)
+
+export const readWebviewHashes = async (): Promise<
+  Partial<Record<string, string>>
+> => getWebviewHashes(MANIFEST_URL)
+```
+
+Pages compare themselves against it through `ensureFreshWebview`, whose
+`report` argument is the diagnostics channel: wire it to the app's
+boot-error route so a refetch that is skipped or that fails to heal
+leaves a trace instead of a silently stale page.
+
+`getPageIdentity()` returns what the page compared — the document-order
+join of its `?v=` stamps. Displaying it answers "am I looking at a
+cached page?" at a glance, which the app version cannot: phone webviews
+cache assets across app versions, so the version on screen says nothing
+about the bundle behind it.
 
 ## What belongs here
 

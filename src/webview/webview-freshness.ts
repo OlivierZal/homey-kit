@@ -37,7 +37,17 @@ const fetchExpected = async (
   return hashes[entry]
 }
 
-const getPageIdentity = (): string | null => {
+/**
+ * The booted page's own identity: the document-order join of every
+ * `?v=` stamp it carries, or `null` on an unstamped page (a dev run,
+ * where nothing is stamped). Displaying it is the one-glance answer to
+ * "am I looking at a cached page?", which no version number can give —
+ * phone webviews cache assets across app versions, so the app version
+ * on screen says nothing about the bundle behind it.
+ * @returns The joined stamps, or `null` when the page carries none.
+ * @category Webview
+ */
+export const getPageIdentity = (): string | null => {
   // Joined in DOCUMENT order — the stamping side iterates the same
   // HTML in source order, so the two joins agree with no comparator
   // (and no locale hazard); the Set drops a hypothetical duplicate
