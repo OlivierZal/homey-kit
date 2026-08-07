@@ -328,6 +328,12 @@ describe(getPageIdentity, () => {
 
     expect(getPageIdentity()).toBeNull()
   })
+
+  it('should report no identity on a detached page', () => {
+    delete globals.document
+
+    expect(getPageIdentity()).toBeNull()
+  })
 })
 
 // FRESH_PAGE's identity served back, so the boot check finds the page
@@ -490,13 +496,13 @@ describe(watchWebviewFreshness, () => {
     )
   })
 
-  it('should turn a re-check that throws into a breadcrumb', async () => {
+  it('should let a re-check on a detached page pass without a sound', async () => {
     const report = vi.fn<(message: string) => void>()
-    const { resume } = install({ references: FRESH_PAGE })
+    const { replace, resume } = install({ references: FRESH_PAGE })
 
     await watchWebviewFreshness(options(serving(LIVE), { report }))
-    // The page detaches under the listener: reading its stamps throws,
-    // and the rejection must die inside the watcher.
+    // The page detaches under the listener: every read inside is
+    // fenced, so the trigger neither throws nor navigates.
     globals.document = {
       visibilityState: 'visible',
       querySelectorAll: (): never => {
@@ -506,8 +512,62 @@ describe(watchWebviewFreshness, () => {
     resume()
     await settled()
 
-    expect(report).toHaveBeenCalledWith(
-      expect.stringContaining('Webview freshness re-check failed:'),
+    expect(replace).not.toHaveBeenCalled()
+    expect(report).not.toHaveBeenCalled()
+  })
+
+  it('should boot the page when the poke channel throws', async () => {
+    // Met in the wild by an adopting app: a transport double without
+    // `on` made the subscription throw, which used to reject the boot.
+    const { replace } = install({ references: STALE_PAGE })
+
+    await expect(
+      watchWebviewFreshness(
+        options(serving(HASHES), {
+          subscribe: (): never => {
+            throw new Error('no channel')
+          },
+        }),
+      ),
+    ).resolves.toBe(true)
+
+    expect(replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('should heal the page even when its diagnostics throw', async () => {
+    const { replace } = install({ references: STALE_PAGE })
+
+    await expect(
+      watchWebviewFreshness(
+        options(serving(HASHES), {
+          report: (): never => {
+            throw new Error('sink down')
+          },
+        }),
+      ),
+    ).resolves.toBe(true)
+
+    // The refetch is decided before the breadcrumb: a broken logger must
+    // not cost the page its self-heal.
+    expect(replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('should stay put when the hash bridge rejects', async () => {
+    const { replace } = install({ references: STALE_PAGE })
+    const serve = vi
+      .fn<() => Promise<Partial<Record<string, string>>>>()
+      .mockRejectedValue(new Error('bridge down'))
+
+    await expect(watchWebviewFreshness(options(serve))).resolves.toBe(false)
+
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('should boot the page with no document at all', async () => {
+    delete globals.document
+
+    await expect(watchWebviewFreshness(options(serving(HASHES)))).resolves.toBe(
+      false,
     )
   })
 })

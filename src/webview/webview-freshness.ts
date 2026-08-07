@@ -13,15 +13,37 @@
 // mismatch that survives its refetch is reported through the optional
 // `report` channel instead of retried. Every failure path stays open
 // (unstamped page, unreachable route, unknown entry, denied storage):
-// a wrong guess must never take a working webview down.
-
-import { fireAndForget } from '../fire-and-forget.ts'
+// a wrong guess must never take a working webview down. That rule is
+// enforced call by call, not by a catch-all: EVERY call leaving this
+// module — the caller's `fetchHashes`, `report` and `subscribe`, the
+// listener registration, and each page API — goes through a fence, so
+// each degradation is reachable by a test.
 
 const REFETCH_GUARD_KEY = 'webview_refetched_for'
 
-const RECHECK_FAILED = 'Webview freshness re-check failed:'
-
 const STAMP = /\?v=(?<hash>[0-9a-f]+)$/u
+
+// Every call that leaves this module — caller-supplied diagnostics and
+// subscription, plus the page APIs themselves — is fenced. This module
+// sits on the boot path: a page must start even when its own logger,
+// its poke channel or a detached document misbehaves, and a degraded
+// self-heal is always preferable to a page that never appears.
+const attempt = (action: () => void): void => {
+  try {
+    action()
+  } catch {
+    // A degraded page is still a running page.
+  }
+}
+
+const reportSafely = (
+  report: ((message: string) => void) | undefined,
+  message: string,
+): void => {
+  attempt(() => {
+    report?.(message)
+  })
+}
 
 const fetchHashesSafely = async (
   fetchHashes: () => Promise<Partial<Record<string, string>>>,
@@ -52,6 +74,16 @@ const fetchExpected = async (
  * @category Webview
  */
 export const getPageIdentity = (): string | null => {
+  try {
+    return joinStamps()
+  } catch {
+    // A page whose references cannot be read has no identity to
+    // compare, which the handshake already treats as "stay put".
+    return null
+  }
+}
+
+const joinStamps = (): string | null => {
   // Joined in DOCUMENT order — the stamping side iterates the same
   // HTML in source order, so the two joins agree with no comparator
   // (and no locale hazard); the Set drops a hypothetical duplicate
@@ -120,7 +152,10 @@ const refetchDocument = (
     location.replace(url.href)
     return true
   } catch {
-    report?.(`Stale webview refetch could not navigate: page ${identity}`)
+    reportSafely(
+      report,
+      `Stale webview refetch could not navigate: page ${identity}`,
+    )
     return false
   }
 }
@@ -138,13 +173,15 @@ const reportStopped = ({
   report?: ((message: string) => void) | undefined
 }): boolean => {
   if (guard === 'denied') {
-    report?.(
+    reportSafely(
+      report,
       `Stale webview: page ${identity}, live ${expected} — storage denied, refetch skipped`,
     )
     return true
   }
   if (guard === 'spent') {
-    report?.(
+    reportSafely(
+      report,
       `Stale webview persists after its refetch: page ${identity}, live ${expected}`,
     )
     return true
@@ -165,12 +202,16 @@ const refetchOnce = (
     return false
   }
   if (!markRefetchedFor(identity)) {
-    report?.(
+    reportSafely(
+      report,
       `Stale webview: page ${identity}, live ${expected} — guard unwritable, refetch skipped`,
     )
     return false
   }
-  report?.(`Stale webview: page ${identity}, live ${expected} — refetching`)
+  reportSafely(
+    report,
+    `Stale webview: page ${identity}, live ${expected} — refetching`,
+  )
   return refetchDocument(identity, report)
 }
 
@@ -282,29 +323,23 @@ const createRunner = ({
 // Registration is fail-open: a page that cannot observe visibility
 // keeps its boot check.
 const onVisible = (recheck: () => void): void => {
-  try {
+  attempt(() => {
     document.addEventListener('visibilitychange', () => {
       whenVisible(recheck)
     })
-  } catch {
-    // A degraded page is still a running page.
-  }
+  })
 }
 
+// Fenced in its own right: the read happens long after registration, on
+// a page that may since have detached, and an exception here would
+// escape into the platform's event dispatch.
 const whenVisible = (recheck: () => void): void => {
-  if (document.visibilityState === 'visible') {
-    recheck()
-  }
+  attempt(() => {
+    if (document.visibilityState === 'visible') {
+      recheck()
+    }
+  })
 }
-
-// Adapts the breadcrumb sink to the fire-and-forget logger seam, so a
-// rejected re-check reaches the same channel as every other freshness
-// decision instead of a console the phone never shows.
-const toBreadcrumb =
-  (reportOnce: (message: string) => void) =>
-  (...args: readonly unknown[]): void => {
-    reportOnce(args.map(String).join(' '))
-  }
 
 /**
  * Runs the freshness handshake at boot and re-runs it whenever the page
@@ -321,17 +356,22 @@ const toBreadcrumb =
 export const watchWebviewFreshness = async (
   options: WatchWebviewFreshnessOptions,
 ): Promise<boolean> => {
-  const { reportOnce, run } = createRunner(options)
-  // Detached through the one sanctioned seam: a re-check that throws
-  // becomes a breadcrumb, never a rejection escaping into a live page.
+  const { run } = createRunner(options)
+  // Started, not awaited: `run` cannot reject — every path it reaches is
+  // fenced — so the trigger only has to detach it, and holding the last
+  // one keeps that detachment explicit rather than floating.
+  let pending = Promise.resolve(false)
   const recheck = (): void => {
-    fireAndForget(run(), { error: toBreadcrumb(reportOnce) }, RECHECK_FAILED)
+    pending = run()
   }
   onVisible(recheck)
-  options.subscribe?.(recheck)
-  try {
-    return await run()
-  } catch {
-    return false
-  }
+  attempt(() => {
+    options.subscribe?.(recheck)
+  })
+  // A trigger can fire while the boot check is still in flight, and it
+  // is then the one holding the verdict: the boot check reports no
+  // refetch of its own once another has been issued. No blanket catch
+  // wraps this — every call that could throw is fenced where it is
+  // made, which a test can reach and a catch-all cannot.
+  return (await run()) || pending
 }
