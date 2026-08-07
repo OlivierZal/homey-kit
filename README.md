@@ -38,7 +38,23 @@ range.
 | `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                        |
 | `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                     |
 | `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                   |
-| `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (vitest peer)                                      |
+| `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (needs vitest)                                     |
+
+## No dependencies, and no peers either
+
+This package declares nothing — no `dependencies`, and deliberately no
+`peerDependencies`. The apps install it as a PRODUCTION dependency (the
+`node` subpath runs on the device), so anything it names is installed on
+the device: a `vitest` peer, optional or not, put 39 packages and 39 MB
+of test framework and bundlers onto a Homey, vulnerabilities included.
+Optional peers do not save you — the consumer's lockfile records the
+link, and `npm ci --omit=dev` installs it.
+
+The two subpaths that need an outside package get it from the consumer
+instead: `./testing` imports `vitest`, which every consumer already has
+as a devDependency, and `./settings` imports `homey` types, which the
+apps have aliased as `@types/homey`. A missing one fails loudly at its
+own call site, in a dev context, which is the right place to learn it.
 
 ## Wiring the type augmentations
 
