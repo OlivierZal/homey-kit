@@ -12,9 +12,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      # Unlike the sibling libraries, this repo installs @olivierzal
-      # packages, so the docs build needs GitHub Packages auth — the
-      # same divergence its publish workflow carries.
+      # The install pulls @olivierzal packages, and GitHub Packages
+      # requires auth even for public reads.
       - uses: ./.github/actions/setup-node-and-install
         with:
           npm-token: ${{ secrets.GITHUB_TOKEN }}
