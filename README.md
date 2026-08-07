@@ -34,11 +34,40 @@ range.
 | Import                           | Contents                                                                                                                      |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `selectChangelogEntries`, `sequential`                      |
+| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …) and the Homey form-control builders (`createInput`, `createSelect`, …)   |
 | `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity` |
 | `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                        |
 | `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                     |
 | `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                   |
 | `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (needs vitest)                                     |
+
+## The DOM subpath
+
+`./dom` holds what every settings page and widget rebuilds otherwise:
+element accessors that report the two failures separately — an id that is
+absent, and an id that names another kind of element — and the builders
+for Homey's `homey-form-*` controls, which are platform markup rather
+than app design and so belong in one place.
+
+Class names stay caller-supplied. The settings pages pass their
+`homey-form-*` decoration; the widgets pass nothing and style bare
+elements through element selectors. One builder serves both, and neither
+page inherits the other's look:
+
+```ts title="settings"
+import {
+  createInput,
+  createLabel,
+  getFieldset,
+} from '@olivierzal/homey-kit/dom'
+
+const input = createInput({ className: 'homey-form-input', id, type })
+getFieldset('login').append(createLabel(input, title, 'homey-form-label'))
+```
+
+Anything tied to one app's domain stays in that app — zone pickers, log
+rows, comboboxes. The bar for entry is the same as everywhere else here:
+the same need, in at least two apps.
 
 ## No dependencies, and no peers either
 

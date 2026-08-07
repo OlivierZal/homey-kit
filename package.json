@@ -24,6 +24,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./dom": {
+      "types": "./dist/dom/index.d.ts",
+      "default": "./dist/dom/index.js"
+    },
     "./node": {
       "types": "./dist/node/webview-hashes.d.ts",
       "default": "./dist/node/webview-hashes.js"
@@ -72,6 +76,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^10.8.0",
+    "happy-dom": "20.11.2",
     "homey-apps-sdk-v3-types": "^0.3.12",
     "jiti": "^2.6.1",
     "prettier": "^3.9.6",
