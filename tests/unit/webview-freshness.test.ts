@@ -3,6 +3,7 @@ import { type Mock, afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ensureFreshWebview,
   getPageIdentity,
+  watchWebviewFreshness,
 } from '../../src/webview/webview-freshness.ts'
 
 // The helper reads narrow slices of the page (its stamped references,
@@ -31,8 +32,16 @@ const globals = globalThis as {
 
 const PAGE_URL = 'https://webview.invalid/page'
 
+interface Page {
+  replace: Mock<(url: string) => void>
+  store: Map<string, string>
+  hide: () => void
+  resume: () => void
+}
+
 const install = ({
   href = PAGE_URL,
+  isListenerDenied = false,
   isStorageDenied = false,
   isWriteDenied = false,
   references,
@@ -40,18 +49,28 @@ const install = ({
 }: {
   references: readonly FakeReference[]
   href?: string
+  isListenerDenied?: boolean
   isStorageDenied?: boolean
   isWriteDenied?: boolean
   stored?: string | null
-}): { replace: Mock<(url: string) => void>; store: Map<string, string> } => {
+}): Page => {
   const replace = vi.fn<(url: string) => void>()
   const store = new Map<string, string>()
   if (stored !== null) {
     store.set('webview_refetched_for', stored)
   }
-  globals.document = {
+  const listeners = new Map<string, () => void>()
+  const page = {
+    visibilityState: 'visible',
+    addEventListener: (type: string, listener: () => void): void => {
+      if (isListenerDenied) {
+        throw new Error('denied')
+      }
+      listeners.set(type, listener)
+    },
     querySelectorAll: (): readonly FakeReference[] => references,
   }
+  globals.document = page
   globals.location = { href, replace }
   globals.sessionStorage = {
     getItem: (key: string): string | null => {
@@ -67,7 +86,16 @@ const install = ({
       store.set(key, value)
     },
   }
-  return { replace, store }
+  return {
+    replace,
+    store,
+    hide: (): void => {
+      page.visibilityState = 'hidden'
+    },
+    resume: (): void => {
+      listeners.get('visibilitychange')?.()
+    },
+  }
 }
 
 // The live identity is the DOCUMENT-ORDER join of the page's stamps.
@@ -299,5 +327,187 @@ describe(getPageIdentity, () => {
     install({ references: [] })
 
     expect(getPageIdentity()).toBeNull()
+  })
+})
+
+// FRESH_PAGE's identity served back, so the boot check finds the page
+// live; the app then ships a new bundle and the served hash moves.
+const serving = (
+  hashes: Partial<Record<string, string>>,
+): Mock<() => Promise<Partial<Record<string, string>>>> =>
+  vi
+    .fn<() => Promise<Partial<Record<string, string>>>>()
+    .mockResolvedValue(hashes)
+
+const LIVE = { 'ata-group-setting': 'cccc0000.aaaa1111' }
+const MOVED = { 'ata-group-setting': 'cccc0000.99999999' }
+
+// The triggers detach their check, so the assertions wait one macrotask
+// for the microtask queue to drain — deterministic, unlike polling.
+const settled = async (): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, 0)
+  })
+
+const options = (
+  fetchHashes: () => Promise<Partial<Record<string, string>>>,
+  extra: {
+    report?: (message: string) => void
+    subscribe?: (onPoke: () => void) => void
+  } = {},
+): Parameters<typeof watchWebviewFreshness>[0] => ({
+  entry: 'ata-group-setting',
+  fetchHashes,
+  ...extra,
+})
+
+const moving = (): Mock<() => Promise<Partial<Record<string, string>>>> =>
+  vi
+    .fn<() => Promise<Partial<Record<string, string>>>>()
+    .mockResolvedValueOnce(LIVE)
+    .mockResolvedValue(MOVED)
+
+describe(watchWebviewFreshness, () => {
+  afterEach(() => {
+    delete globals.document
+    delete globals.location
+    delete globals.sessionStorage
+  })
+
+  it('should refetch straight away when the boot check finds the page stale', async () => {
+    const { replace } = install({ references: STALE_PAGE })
+
+    await expect(watchWebviewFreshness(options(serving(HASHES)))).resolves.toBe(
+      true,
+    )
+
+    expect(replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('should re-check a surviving page when it returns to the foreground', async () => {
+    // The measured gap: a mobile webview outlives the app restart, so
+    // no new document — and so no boot check — ever happens.
+    const { replace, resume } = install({ references: FRESH_PAGE })
+
+    await expect(watchWebviewFreshness(options(moving()))).resolves.toBe(false)
+
+    expect(replace).not.toHaveBeenCalled()
+
+    resume()
+    await settled()
+
+    expect(replace).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledWith(`${PAGE_URL}?fresh=cccc0000.aaaa1111`)
+  })
+
+  it('should ignore a visibility change that does not bring the page forward', async () => {
+    const { hide, replace, resume } = install({ references: FRESH_PAGE })
+    const serve = moving()
+
+    await watchWebviewFreshness(options(serve))
+    hide()
+    resume()
+    await settled()
+
+    expect(serve).toHaveBeenCalledTimes(1)
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('should navigate once however often the page returns', async () => {
+    const { replace, resume } = install({ references: STALE_PAGE })
+
+    await watchWebviewFreshness(options(serving(HASHES)))
+    resume()
+    resume()
+    resume()
+    await settled()
+
+    // The per-identity guard bounds the navigation, and a page already
+    // refetching stops checking altogether.
+    expect(replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('should re-check through the app poke when a channel is given', async () => {
+    const { replace } = install({ references: FRESH_PAGE })
+    let poke: (() => void) | undefined
+
+    await watchWebviewFreshness(
+      options(moving(), {
+        subscribe: (onPoke): void => {
+          poke = onPoke
+        },
+      }),
+    )
+    poke?.()
+    await settled()
+
+    expect(replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('should collapse a breadcrumb repeated by every return', async () => {
+    const report = vi.fn<(message: string) => void>()
+    const { resume } = install({
+      references: STALE_PAGE,
+      stored: 'cccc0000.00000000',
+    })
+
+    await watchWebviewFreshness(options(serving(HASHES), { report }))
+    resume()
+    resume()
+    await settled()
+
+    expect(report).toHaveBeenCalledTimes(1)
+    expect(report).toHaveBeenCalledWith(
+      'Stale webview persists after its refetch: page cccc0000.00000000, live cccc0000.aaaa1111',
+    )
+  })
+
+  it('should keep the page booting when visibility cannot be observed', async () => {
+    const { replace } = install({
+      isListenerDenied: true,
+      references: STALE_PAGE,
+    })
+
+    await expect(watchWebviewFreshness(options(serving(HASHES)))).resolves.toBe(
+      true,
+    )
+
+    expect(replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('should keep the page booting when the boot check throws', async () => {
+    install({ references: STALE_PAGE })
+    globals.document = {
+      visibilityState: 'visible',
+      addEventListener: (): void => undefined,
+      querySelectorAll: (): never => {
+        throw new Error('detached')
+      },
+    }
+
+    await expect(watchWebviewFreshness(options(serving(HASHES)))).resolves.toBe(
+      false,
+    )
+  })
+
+  it('should turn a re-check that throws into a breadcrumb', async () => {
+    const report = vi.fn<(message: string) => void>()
+    const { resume } = install({ references: FRESH_PAGE })
+
+    await watchWebviewFreshness(options(serving(LIVE), { report }))
+    // The page detaches under the listener: reading its stamps throws,
+    // and the rejection must die inside the watcher.
+    globals.document = {
+      visibilityState: 'visible',
+      querySelectorAll: (): never => {
+        throw new Error('detached')
+      },
+    }
+    resume()
+    await settled()
+
+    expect(report).toHaveBeenCalledWith(
+      expect.stringContaining('Webview freshness re-check failed:'),
+    )
   })
 })

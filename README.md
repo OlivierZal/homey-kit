@@ -31,14 +31,14 @@ range.
 
 ## Subpaths
 
-| Import                           | Contents                                                                                               |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `sequential`                         |
-| `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `ensureFreshWebview`, `getPageIdentity`   |
-| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm` |
-| `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves              |
-| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation            |
-| `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (vitest peer)               |
+| Import                           | Contents                                                                                                                      |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `sequential`                                                |
+| `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity` |
+| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                        |
+| `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                     |
+| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                   |
+| `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (vitest peer)                                      |
 
 ## Wiring the type augmentations
 
@@ -119,10 +119,48 @@ export const readWebviewHashes = async (): Promise<
 > => getWebviewHashes(MANIFEST_URL)
 ```
 
-Pages compare themselves against it through `ensureFreshWebview`, whose
-`report` argument is the diagnostics channel: wire it to the app's
-boot-error route so a refetch that is skipped or that fails to heal
-leaves a trace instead of a silently stale page.
+Pages wire the whole handshake in one call, `watchWebviewFreshness`,
+whose `report` argument is the diagnostics channel: point it at the
+app's boot-error route so a refetch that is skipped or that fails to
+heal leaves a trace instead of a silently stale page.
+
+```ts title="settings/index"
+if (
+  await watchWebviewFreshness({
+    entry: 'settings',
+    fetchHashes: async () => homeyApiGet(homey, '/webview-hashes'),
+    report: (message) => {
+      reportFreshness(homey, message)
+    },
+    subscribe: (onPoke) => {
+      homey.on('webview_hashes_changed', onPoke)
+    },
+  })
+) {
+  // The document is being replaced: skip this page's own init.
+  return
+}
+```
+
+**The guarantee lives in the boot check, and the foreground trigger is
+what carries it where no boot happens.** A new document checks itself,
+so every surface that remounts its page is fresh for free — the Homey
+web app tears the settings page down while the app restarts and mounts
+it again, which is why it never looks stale. A mobile webview instead
+survives the restart: no new document, no boot check, and the page
+stays stale indefinitely. `watchWebviewFreshness` re-checks whenever
+the page returns to the foreground, which is the moment that case
+resolves itself.
+
+Do not fold that trigger into the `subscribe` poke. Measured on-device:
+the app emits `webview_hashes_changed` at the end of its own `onInit`,
+i.e. exactly when the restart has just disconnected every open page, so
+its audience is absent by construction — an open page produced no hash
+call and no breadcrumb. The poke is kept because it costs nothing where
+it does arrive; it guarantees nothing anywhere.
+
+`ensureFreshWebview` remains exported for a page that owns its own
+triggers — the widget bootstraps use it directly.
 
 `getPageIdentity()` returns what the page compared — the document-order
 join of its `?v=` stamps. Displaying it answers "am I looking at a
