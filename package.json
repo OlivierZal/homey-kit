@@ -28,6 +28,10 @@
       "types": "./dist/dom/index.d.ts",
       "default": "./dist/dom/index.js"
     },
+    "./manifest": {
+      "types": "./dist/manifest/index.d.ts",
+      "default": "./dist/manifest/index.js"
+    },
     "./node": {
       "types": "./dist/node/webview-hashes.d.ts",
       "default": "./dist/node/webview-hashes.js"
