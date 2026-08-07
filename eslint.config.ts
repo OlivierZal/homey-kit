@@ -4,7 +4,11 @@ import { library, webviewFloorBlock } from '@olivierzal/configs/eslint'
 // The webview modules ship into phone webviews whose engines stall at
 // es2023. The floor itself comes from the shared fragment the Homey
 // preset applies, so it cannot drift from what the apps enforce.
-const WEBVIEW_FLOOR_FILES = ['src/settings/**/*.ts', 'src/webview/**/*.ts']
+const WEBVIEW_FLOOR_FILES = [
+  'src/dom/**/*.ts',
+  'src/settings/**/*.ts',
+  'src/webview/**/*.ts',
+]
 
 const config: Config[] = [
   // tests/fixtures holds TEXT the kernels read, not code.
