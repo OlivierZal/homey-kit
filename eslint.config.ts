@@ -11,14 +11,18 @@ const config: Config[] = [
   { ignores: ['coverage/', 'dist/', 'tests/fixtures/'] },
   ...library(),
   {
-    // src/testing imports its optional peer (vitest): the suites it
-    // generates run inside the consumer's vitest process. The settings
-    // transport types against the homey SDK peer the same way.
+    // These two subpaths reach outside the package on purpose, and the
+    // package declares NOTHING to satisfy them: naming `vitest` or the
+    // homey types as a peer would install them on the device, since the
+    // apps depend on this package in production. Both come from the
+    // consumer, which has them as devDependencies — `./testing` runs
+    // inside the consumer's vitest process, `./settings` types against
+    // its aliased homey SDK.
     files: ['src/settings/**/*.ts', 'src/testing/**/*.ts'],
     rules: {
       'import-x/no-extraneous-dependencies': [
         'error',
-        { devDependencies: false, peerDependencies: true },
+        { devDependencies: true, peerDependencies: false },
       ],
     },
   },
