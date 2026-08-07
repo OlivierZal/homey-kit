@@ -47,8 +47,7 @@ export interface Surface {
 }
 
 // Boundary guard: the manifest is caller-controlled JSON, so each api
-// entry is checked for the route shape instead of asserted into it —
-// junk entries drop out rather than poisoning the comparison.
+// entry is checked for the route shape instead of asserted into it.
 const isDeclaredRoute = (value: unknown): value is DeclaredRoute =>
   typeof value === 'object' &&
   value !== null &&
@@ -57,6 +56,9 @@ const isDeclaredRoute = (value: unknown): value is DeclaredRoute =>
   'path' in value &&
   typeof value.path === 'string'
 
+// A route the guard cannot read is a route it cannot police, so a
+// malformed manifest throws instead of yielding fewer routes: dropping
+// the entry would turn a broken declaration into a silent pass.
 const readRoutes = async (manifestPath: string): Promise<DeclaredRoute[]> => {
   const manifest: unknown = JSON.parse(await readFile(manifestPath, 'utf8'))
   if (
@@ -66,9 +68,18 @@ const readRoutes = async (manifestPath: string): Promise<DeclaredRoute[]> => {
     typeof manifest.api !== 'object' ||
     manifest.api === null
   ) {
-    return []
+    throw new Error(
+      `${manifestPath}: no \`api\` object to read routes from; the surface names a manifest that declares none`,
+    )
   }
-  return Object.values(manifest.api).filter((value) => isDeclaredRoute(value))
+  return Object.entries(manifest.api).map(([id, value]) => {
+    if (!isDeclaredRoute(value)) {
+      throw new Error(
+        `${manifestPath}: api entry \`${id}\` declares no string \`method\` and \`path\`; fix the manifest instead of leaving the route unpoliced`,
+      )
+    }
+    return value
+  })
 }
 
 const listSourceFiles = async (dir: string): Promise<string[]> => {

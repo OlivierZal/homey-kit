@@ -1,0 +1,6 @@
+{
+  "api": {
+    "getThing": { "method": "GET", "path": "/thing" },
+    "updateThing": { "method": "PUT" }
+  }
+}
