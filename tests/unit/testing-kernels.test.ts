@@ -36,6 +36,18 @@ createRouteGuardSuite([CLEAN_SURFACE])
 createApiContractSuite<FixtureHandler>([CLEAN_CONTRACT_SURFACE])
 
 describe('route-guard findings', () => {
+  // A malformed declaration must break the run, not shrink the route
+  // set: dropping it would leave that route unpoliced under a green
+  // suite, the one outcome this kernel exists to prevent.
+  it('should throw on an api entry that is not a route', async () => {
+    await expect(
+      analyzeRouteGuards({
+        ...CLEAN_SURFACE,
+        manifest: fixturePath('manifest-malformed-route.json'),
+      }),
+    ).rejects.toThrow(/api entry `updateThing` declares no string/v)
+  })
+
   // The mutation seam: a route removed from the manifest must surface
   // as a finding — this is what fails a consumer whose table and
   // sources drift apart.

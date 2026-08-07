@@ -1,11 +1,9 @@
 import type { Config } from 'eslint/config'
-import { library } from '@olivierzal/configs/eslint'
+import { library, webviewFloorBlock } from '@olivierzal/configs/eslint'
 
 // The webview modules ship into phone webviews whose engines stall at
-// es2023: no `Object.groupBy`/`Map.groupBy`, no iterator helpers, no
-// `v` regex flag. Restated here until @olivierzal/configs exports its
-// floor block standalone (today it only ships inside the homey-app
-// preset, whose other blocks are app-shaped).
+// es2023. The floor itself comes from the shared fragment the Homey
+// preset applies, so it cannot drift from what the apps enforce.
 const WEBVIEW_FLOOR_FILES = ['src/settings/**/*.ts', 'src/webview/**/*.ts']
 
 const config: Config[] = [
@@ -24,38 +22,7 @@ const config: Config[] = [
       ],
     },
   },
-  {
-    files: WEBVIEW_FLOOR_FILES,
-    rules: {
-      'no-restricted-properties': [
-        'error',
-        {
-          message: 'es2024 static — the webview floor is es2023.',
-          object: 'Object',
-          property: 'groupBy',
-        },
-        {
-          message: 'es2024 static — the webview floor is es2023.',
-          object: 'Map',
-          property: 'groupBy',
-        },
-      ],
-      'no-restricted-syntax': [
-        'error',
-        {
-          message:
-            'The `v` regex flag is es2024 — the webview floor is es2023.',
-          selector: 'Literal[regex.flags=/v/]',
-        },
-        {
-          message: 'Iterator helpers are es2025 — the webview floor is es2023.',
-          selector:
-            'CallExpression[callee.property.name=/^(?:drop|every|filter|find|flatMap|forEach|map|reduce|some|take|toArray)$/][callee.object.callee.property.name=/^(?:entries|keys|values|matchAll)$/]',
-        },
-      ],
-      'require-unicode-regexp': ['error', { requireFlag: 'u' }],
-    },
-  },
+  webviewFloorBlock(WEBVIEW_FLOOR_FILES),
 ]
 
 export default config

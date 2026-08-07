@@ -18,6 +18,13 @@ updates:
   - commit-message:
       prefix: ci
     directory: /
+    # One version covers both channels, and the pin check enforces it.
+    # Left to Dependabot, the workflow refs would move in their own PR
+    # while the npm pin stayed put: each PR would then fail the check
+    # and neither could merge alone. The npm bump drives, and the
+    # dependabot-fix run carries the refs along in the same branch.
+    ignore:
+      - dependency-name: OlivierZal/configs
     package-ecosystem: github-actions
     schedule:
       interval: weekly
