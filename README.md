@@ -159,6 +159,11 @@ its audience is absent by construction — an open page produced no hash
 call and no breadcrumb. The poke is kept because it costs nothing where
 it does arrive; it guarantees nothing anywhere.
 
+Everything the caller hands over is fenced: a `report` that throws, a
+`subscribe` that throws, a rejecting `fetchHashes`, an unregistrable
+listener or a detached document all degrade the self-heal and never
+stop the page from booting.
+
 `ensureFreshWebview` remains exported for a page that owns its own
 triggers — the widget bootstraps use it directly.
 
