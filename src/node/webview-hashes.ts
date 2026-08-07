@@ -41,26 +41,21 @@ const loadWebviewHashes = async (
   return isStringRecord(parsed) ? parsed : {}
 }
 
-const cache: { value: Promise<Partial<Record<string, string>>> | null } = {
-  value: null,
-}
-
 /**
  * Reads the packaged manifest; outside the packaged flow (dev suite
  * runs) it is absent and the empty map means every page treats itself
  * as fresh.
- * @param manifestUrl - Test seam; the bare call the route handler makes reads (and caches) the manifest next to the app root.
+ *
+ * The manifest location is APP knowledge: it sits where the app's own
+ * bundler stamped it, which no path relative to this module can reach.
+ * It is required for that reason — an inferred default resolves inside
+ * `node_modules` and fails open, disabling the freshness handshake with
+ * no symptom. Nothing is memoised either: a module whose purpose is
+ * defeating stale caches must not hold one.
+ * @param manifestUrl - Where the app's bundler emitted `webview-hashes.json`, usually `new URL('../webview-hashes.json', import.meta.url)` from the app root.
  * @returns The page-entry → live-identity map.
  * @category Node
  */
 export const getWebviewHashes = async (
-  manifestUrl?: URL,
-): Promise<Partial<Record<string, string>>> => {
-  if (manifestUrl !== undefined) {
-    return loadWebviewHashes(manifestUrl)
-  }
-  cache.value ??= loadWebviewHashes(
-    new URL('../webview-hashes.json', import.meta.url),
-  )
-  return cache.value
-}
+  manifestUrl: URL,
+): Promise<Partial<Record<string, string>>> => loadWebviewHashes(manifestUrl)

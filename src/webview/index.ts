@@ -8,4 +8,4 @@ export {
   type DirtyGateOptions,
   createDirtyGate,
 } from './dirty-gate.ts'
-export { ensureFreshWebview } from './webview-freshness.ts'
+export { ensureFreshWebview, getPageIdentity } from './webview-freshness.ts'
