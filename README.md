@@ -31,16 +31,17 @@ range.
 
 ## Subpaths
 
-| Import                           | Contents                                                                                                                      |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `selectChangelogEntries`, `sequential`                      |
-| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …) and the Homey form-control builders (`createInput`, `createSelect`, …)   |
-| `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity` |
-| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                        |
-| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page      |
-| `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                     |
-| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                   |
-| `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (needs vitest)                                     |
+| Import                           | Contents                                                                                                                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `selectChangelogEntries`, `sequential`                                                                                                                                   |
+| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …) and the Homey form-control builders (`createInput`, `createSelect`, …)                                                                                                                |
+| `@olivierzal/homey-kit/webview`  | The boot cycle (`runWebview`, `withInitTimeout`, `surfaceError`, `fireAndForget`, `trySetDocumentLanguage`), `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity` |
+| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                                                                                                                                     |
+| `@olivierzal/homey-kit/widget`   | The promise-native widget SDK typed: `homeyApiGet`/`Post`/`Put`                                                                                                                                                                            |
+| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                   |
+| `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                                                                                                                                  |
+| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                                                                                                                                |
+| `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (needs vitest)                                                                                                                                                  |
 
 ## The DOM subpath
 
@@ -67,8 +68,42 @@ getFieldset('login').append(createLabel(input, title, 'homey-form-label'))
 ```
 
 Anything tied to one app's domain stays in that app — zone pickers, log
-rows, comboboxes. The bar for entry is the same as everywhere else here:
-the same need, in at least two apps.
+rows, comboboxes.
+
+## The boot cycle
+
+`./webview` carries the sequence every page runs before it is usable,
+and it exists for one invariant: **the loading overlay always ends**. A
+page that never reaches `Homey.ready()` spins forever, and the user has
+no way to recover but to reinstall.
+
+```ts title="settings page"
+import { runWebview, surfaceError } from '@olivierzal/homey-kit/webview'
+
+export const start = async (homey: HomeySettings): Promise<void> => {
+  const { error, hasFailed } = await runWebview(homey, init(homey), {
+    timeoutMessage: 'Timed out while loading the settings page',
+  })
+  if (hasFailed) {
+    surfaceError(error, 'Unhandled settings error')
+  }
+}
+```
+
+`ready` fires in a `finally`, so a rejecting init, a page that throws
+while building itself, and a transport that never answers all end the
+same way. The deadline **rejects** rather than resolves — a hung fetch
+must surface as an error, not resolve silently into a half-built page —
+and the work is not cancelled, so a late success repaints over the
+degraded state.
+
+Where the failure is announced is the caller's choice, and both moments
+are real: `onError` runs before `ready`, for a widget that must paint an
+error at the right size; the returned outcome is read after it, for a
+page that would rather let the overlay close first. Messages are
+parameters, not policy — the settings pages and the widgets name
+themselves differently, and neither should have to accept the other's
+wording to share the cycle.
 
 ## The manifest subpath
 
@@ -293,7 +328,26 @@ shared.
 
 ## What belongs here
 
-A module enters the kit when it is identical in at least two apps, has
+Two bars, because two different things prove generality.
+
+**Our own code** enters when it is identical in at least two apps, has
 been stable for a full cycle, and carries no hidden coupling to a Homey
-SDK version. Anything app-specific — ledgers, overrides, manifests —
+SDK version. Two consumers are the evidence: one app's helper is one
+app's opinion, and hoisting it early freezes a shape nothing has tested
+against a second set of needs.
+
+**Homey's platform surface** enters at one consumer: the SDK transports,
+the `homey-form-*` markup, the boot cycle. Its generality comes from the
+platform, not from our usage — a second app would rediscover the same
+API because the platform hands it the same API. Waiting for that
+rediscovery buys nothing and costs a divergent second implementation,
+which is exactly how the settings pages ended up with three spellings of
+the same element accessor.
+
+The distinction matters because "it looks generic" is available as an
+argument for anything. It is not the test. The test is _where the
+generality comes from_: the platform, or a coincidence between two of
+our apps.
+
+Anything app-specific — ledgers, overrides, manifests, domain builders —
 stays in its app.

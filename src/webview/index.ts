@@ -1,8 +1,17 @@
 /**
- * The webview-side primitives every gated page shares: the dirty gate
- * and the stale-cache self-heal.
+ * The webview-side primitives every page shares: the boot cycle, the
+ * dirty gate and the stale-cache self-heal.
  * @packageDocumentation
  */
+export {
+  type ReadyHost,
+  type RunWebviewOptions,
+  fireAndForget,
+  runWebview,
+  surfaceError,
+  trySetDocumentLanguage,
+  withInitTimeout,
+} from './boot.ts'
 export {
   type DirtyGate,
   type DirtyGateOptions,

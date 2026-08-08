@@ -25,6 +25,7 @@ const config = typedocBase({
     'src/testing/index.ts',
     'src/types/homey.ts',
     'src/webview/index.ts',
+    'src/widget/index.ts',
   ],
   hostedBaseUrl: 'https://olivierzal.github.io/homey-kit/',
   name: 'Homey Kit',
