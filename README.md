@@ -141,6 +141,7 @@ declare module 'homey' {
   interface ManagerSettings extends HomeyLib.ManagerSettings {
     get: TypedManagerSettings<HomeySettings>['get']
     set: TypedManagerSettings<HomeySettings>['set']
+    unset: TypedManagerSettings<HomeySettings>['unset']
   }
 }
 ```
@@ -153,6 +154,21 @@ the conflict **silently** towards the SDK's wide type — `getDrivers()`
 hands back `Device[]` where the app expects `MyDriver[]`, with no error
 anywhere. Picking the members keeps one declaration site per member, so
 a future divergence is a compile error rather than a silent widening.
+
+`TypedManagerSettings` takes the app's keys and nothing else — there is
+no `(key: string)` overload. An app that must address settings
+dynamically, to satisfy an outside interface imposing `key: string`,
+narrows at that one boundary:
+
+```ts title="adapter"
+const settingKey = (key: string): keyof HomeySettings =>
+  key as keyof HomeySettings
+```
+
+The knowledge lives there and nowhere else: only the adapter knows the
+keys it forwards are real. A global escape hatch would spend that one
+narrowing across every call site in the app, and a typo would read
+`undefined` at runtime instead of failing to compile.
 
 ## Wiring the test kernels
 
