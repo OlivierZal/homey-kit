@@ -37,6 +37,7 @@ range.
 | `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …) and the Homey form-control builders (`createInput`, `createSelect`, …)   |
 | `@olivierzal/homey-kit/webview`  | `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity` |
 | `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                        |
+| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page      |
 | `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                     |
 | `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                   |
 | `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (needs vitest)                                     |
@@ -68,6 +69,34 @@ getFieldset('login').append(createLabel(input, title, 'homey-form-label'))
 Anything tied to one app's domain stays in that app — zone pickers, log
 rows, comboboxes. The bar for entry is the same as everywhere else here:
 the same need, in at least two apps.
+
+## The manifest subpath
+
+`./manifest` turns what Homey states in the app manifest — a driver's
+settings, nested in groups and localized, and its pairing login form —
+into the flat list of controls a settings page renders. It is node-side:
+the app reads its own manifest and serves the result to the page.
+
+```ts title="app"
+import {
+  getDriverLoginSetting,
+  getDriverSettings,
+} from '@olivierzal/homey-kit/manifest'
+
+const language = this.homey.i18n.getLanguage()
+const settings = this.homey.manifest.drivers.flatMap((driver) => [
+  ...getDriverSettings(driver, language),
+  ...getDriverLoginSetting(driver, language),
+])
+```
+
+The manifest types here describe only the fields that are read, so an
+app's own richer manifest type stays assignable — which is what lets this
+subpath name no SDK type, and the package keep no peers.
+
+`mergeDeviceSettings` folds several devices' stored values into the one
+value a grouped control shows: a setting they disagree on collapses to
+`null` while the settings they agree on keep folding independently.
 
 ## No dependencies, and no peers either
 
