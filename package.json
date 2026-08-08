@@ -51,6 +51,10 @@
     "./webview": {
       "types": "./dist/webview/index.d.ts",
       "default": "./dist/webview/index.js"
+    },
+    "./widget": {
+      "types": "./dist/widget/index.d.ts",
+      "default": "./dist/widget/index.js"
     }
   },
   "types": "dist/index.d.ts",
