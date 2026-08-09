@@ -96,7 +96,12 @@ const getElement = <T extends HTMLElement>(
   elementConstructor: new () => T,
   elementType: string,
 ): T => {
-  const element = document.querySelector(`#${id}`)
+  // The id is escaped for the IDENTIFIER position — the context
+  // `CSS.escape` is made for: a sub-capability id embeds a dot, and an
+  // unescaped `#id` would parse as id-plus-class and misdiagnose the
+  // element as absent. (`createOption` documents the inverse trap: the
+  // same escape is WRONG inside a quoted attribute value.)
+  const element = document.querySelector(`#${CSS.escape(id)}`)
   if (element === null) {
     throw new TypeError(`Element with id \`${id}\` not found`)
   }

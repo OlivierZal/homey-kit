@@ -2,14 +2,11 @@
 // consumer's webview sources may only call routes their own surface
 // declares. Paths are extracted from the sources — literal ones exactly,
 // template-built ones by their fixed chunks — and checked against the
-// declared table. Each app supplies its `Surface` table alone;
-// `createRouteGuardSuite` generates the shared checks, and
-// `analyzeRouteGuards` exposes the findings for direct assertion (the
-// seam this package's own mutation tests use). The declaration half
-// lives in `createApiContractSuite`.
+// declared table. Each app supplies its `Surface` table and its own
+// `describe`/`it` block asserting over `analyzeRouteGuards` — declaring
+// the suite app-side is what keeps every test file visibly a test file.
+// The declaration half lives in `findContractBreach`.
 import { readdir, readFile } from 'node:fs/promises'
-
-import { describe, expect, it } from 'vitest'
 
 /**
  * One manifest-declared route, the unit every swept call site must
@@ -366,46 +363,4 @@ export const analyzeRouteGuards = async (
       templateCalls,
     ),
   }
-}
-
-/**
- * Generates the family's route-guard suite over the caller's surfaces.
- * @param surfaces - One entry per webview surface the app ships.
- * @category Testing
- */
-export const createRouteGuardSuite = (surfaces: readonly Surface[]): void => {
-  describe('api route guards', () => {
-    describe.each(surfaces)('$name', (surface) => {
-      it('should declare every path its webview sources call', async () => {
-        const findings = await analyzeRouteGuards(surface)
-
-        expect(findings.undeclaredPaths).toStrictEqual([])
-      })
-
-      it('should declare every method its webview sources call each path with', async () => {
-        const findings = await analyzeRouteGuards(surface)
-
-        expect(findings.undeclaredMethodCalls).toStrictEqual([])
-      })
-
-      it('should declare a route of the same method for every template-built call', async () => {
-        const findings = await analyzeRouteGuards(surface)
-
-        expect(findings.undeclaredTemplateCalls).toStrictEqual([])
-      })
-
-      // The checks above pass vacuously on a call the extractors cannot
-      // read, which is how a verb could go unchecked. Accounting for
-      // every call site — parsed, or handing over a path it does not
-      // spell — turns that silence into a failure.
-      it('should account for every helper call site in its own sources', async () => {
-        const findings = await analyzeRouteGuards(surface)
-
-        expect(findings.accountedCallSites).toBeGreaterThan(0)
-        expect(findings.parsedOrIndirectCalls).toBeGreaterThanOrEqual(
-          findings.accountedCallSites,
-        )
-      })
-    })
-  })
 }

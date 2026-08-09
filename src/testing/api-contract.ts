@@ -3,9 +3,7 @@
 // supplies its surfaces (and its handler union as the type parameter);
 // `findContractBreach` exposes the comparison for direct assertion (the
 // seam this package's own mutation tests use). The call-site half lives
-// in `createRouteGuardSuite`.
-import { describe, expect, it } from 'vitest'
-
+// in `analyzeRouteGuards`.
 /**
  * One API surface under contract: its exposed handlers, its manifest
  * declaration and a display name for the failure output.
@@ -36,30 +34,4 @@ export const findContractBreach = (
   return declared.join('\n') === exposed.join('\n')
     ? null
     : { declared, exposed }
-}
-
-/**
- * Generates the family's contract suite over the caller's surfaces.
- * @param surfaces - One entry per API surface the app ships.
- * @category Testing
- */
-export const createApiContractSuite = <THandler extends CallableFunction>(
-  surfaces: readonly ContractSurface<THandler>[],
-): void => {
-  // The type half lives in the signature: the caller's
-  // `createApiContractSuite<Handler>` line only compiles when the whole
-  // handler union is callable — no per-name method reference ever
-  // leaves its object (unbound-method).
-  describe('api contract', () => {
-    // One equality per surface pins the ids ↔ handlers mapping in both
-    // directions at once: a handler with no declaration and a
-    // declaration with no handler both break it, and the diff names the
-    // offender.
-    it.each(surfaces)(
-      '$name should declare exactly the handlers its manifest names',
-      (surface) => {
-        expect(findContractBreach(surface)).toBeNull()
-      },
-    )
-  })
 }

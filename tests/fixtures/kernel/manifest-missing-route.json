@@ -1,1 +1,6 @@
-{ "api": { "updateThing": { "method": "PUT", "path": "/thing/:id" } } }
+{
+  "api": {
+    "updateThing": { "method": "PUT", "path": "/thing/:id" },
+    "getThingDetail": { "method": "GET", "path": "/thing/:id" }
+  }
+}

@@ -121,6 +121,39 @@ export interface RunWebviewOptions {
   readonly onError?: (error: unknown) => void
 }
 
+// Fenced like every caller-supplied sink: a throwing one must neither
+// replace the outcome the caller reads nor abort the init a helper
+// promises never to abort.
+const invokeSinkSafely = (
+  sink: ((error: unknown) => void) | undefined,
+  error: unknown,
+): void => {
+  if (sink === undefined) {
+    return
+  }
+  try {
+    sink(error)
+  } catch {
+    // The failure it was handed survives in the caller's own outcome.
+  }
+}
+
+// Fenced: the height supplier runs inside `finally`, where a throw
+// would skip `ready` — the exact spin this module exists to prevent.
+// A widget that cannot measure itself opens at the default height.
+const measureHeight = (
+  height: (() => number) | undefined,
+): { height: number } | undefined => {
+  if (height === undefined) {
+    return undefined
+  }
+  try {
+    return { height: height() }
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * Runs a webview's init chain with the guarantees every page shares:
  * the work is time-bounded, a failure reaches `onError`, and
@@ -146,9 +179,9 @@ export const runWebview = async (
   } catch (error_) {
     error = error_
     hasFailed = true
-    onError?.(error_)
+    invokeSinkSafely(onError, error_)
   } finally {
-    homey.ready(height === undefined ? undefined : { height: height() })
+    homey.ready(measureHeight(height))
   }
   return { error, hasFailed }
 }
@@ -168,6 +201,6 @@ export const trySetDocumentLanguage = async (
   try {
     document.documentElement.lang = await fetchLanguage()
   } catch (error) {
-    onError?.(error)
+    invokeSinkSafely(onError, error)
   }
 }

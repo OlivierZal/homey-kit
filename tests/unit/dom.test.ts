@@ -72,6 +72,18 @@ describe('typed accessors', () => {
       'Element with id `absent` not found',
     )
   })
+
+  // Sub-capability ids embed dots; a built `#id` selector would parse
+  // one as id-plus-class and misdiagnose the element as absent.
+  it('should resolve an id carrying a selector-special character', () => {
+    const button = document.createElement('button')
+    button.id = 'measure_temperature.outdoor'
+    document.body.append(button)
+
+    expect(getButton('measure_temperature.outdoor')).toBe(button)
+
+    button.remove()
+  })
 })
 
 describe(createOption, () => {
