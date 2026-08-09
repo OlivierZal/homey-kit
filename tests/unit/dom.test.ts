@@ -16,6 +16,7 @@ import {
   getInput,
   getSelect,
   getSpan,
+  parseFormValue,
 } from '../../src/dom/index.ts'
 
 const numberInput = (): HTMLInputElement => {
@@ -238,5 +239,98 @@ describe(createSelect, () => {
 
     expect(select.className).toBe('')
     expect(select.options).toHaveLength(1)
+  })
+})
+
+describe(parseFormValue, () => {
+  it('should read an empty value as null', () => {
+    const select = createSelect('mode', [])
+
+    expect(parseFormValue(select)).toBeNull()
+  })
+
+  it('should read a checkbox as its checked state', () => {
+    const checkbox = createInput({ id: 'onoff', type: 'checkbox' })
+
+    expect(parseFormValue(checkbox)).toBe(false)
+
+    checkbox.checked = true
+
+    expect(parseFormValue(checkbox)).toBe(true)
+  })
+
+  it('should read an indeterminate checkbox as null', () => {
+    const checkbox = createInput({ id: 'onoff', type: 'checkbox' })
+    checkbox.indeterminate = true
+
+    expect(parseFormValue(checkbox)).toBeNull()
+  })
+
+  it('should hand a bounded number input to the number strategy', () => {
+    const input = createInput({
+      id: 'target',
+      max: 30,
+      min: 10,
+      type: 'number',
+      value: '35',
+    })
+    const clamp = vi.fn<(input: HTMLInputElement) => number>(({ max }) =>
+      Number(max),
+    )
+
+    expect(parseFormValue(input, clamp)).toBe(30)
+    expect(clamp).toHaveBeenCalledWith(input)
+  })
+
+  it('should fall back to the plain read without a number strategy', () => {
+    const input = createInput({
+      id: 'target',
+      max: 30,
+      min: 10,
+      type: 'number',
+      value: '35',
+    })
+
+    expect(parseFormValue(input)).toBe(35)
+  })
+
+  it('should not treat a half-bounded number input as bounded', () => {
+    const parseNumber = vi.fn<() => number>(() => 0)
+    const noMax = createInput({ id: 'floor', min: 10, type: 'number' })
+    noMax.value = '12'
+    const noMin = createInput({ id: 'ceiling', max: 30, type: 'number' })
+    noMin.value = '12'
+
+    expect(parseFormValue(noMax, parseNumber)).toBe(12)
+    expect(parseFormValue(noMin, parseNumber)).toBe(12)
+    expect(parseNumber).not.toHaveBeenCalled()
+  })
+
+  it('should read the boolean strings as booleans', () => {
+    const select = createSelect(
+      'enabled',
+      booleanOptions((key) => key),
+    )
+    select.value = 'true'
+
+    expect(parseFormValue(select)).toBe(true)
+
+    select.value = 'false'
+
+    expect(parseFormValue(select)).toBe(false)
+  })
+
+  it('should read a finite numeric string as a number', () => {
+    const select = createSelect('speed', [{ id: '42', label: 'Fast' }])
+    select.value = '42'
+
+    expect(parseFormValue(select)).toBe(42)
+  })
+
+  it('should keep a non-numeric string as-is', () => {
+    const select = createSelect('mode', [{ id: 'auto', label: 'Automatic' }])
+    select.value = 'auto'
+
+    expect(parseFormValue(select)).toBe('auto')
   })
 })
