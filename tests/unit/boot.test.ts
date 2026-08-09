@@ -172,6 +172,33 @@ describe(runWebview, () => {
     vi.useRealTimers()
   })
 
+  it('still ends the overlay when the height supplier throws', async () => {
+    const ready = mockReady()
+
+    const outcome = await runWebview({ ready }, Promise.resolve(), {
+      height: () => {
+        throw new Error('unmeasurable')
+      },
+    })
+
+    expect(ready).toHaveBeenCalledWith(undefined)
+    expect(outcome).toStrictEqual({ error: undefined, hasFailed: false })
+  })
+
+  it('keeps the outcome when the error sink throws', async () => {
+    const ready = mockReady()
+    const error = new Error('boom')
+
+    const outcome = await runWebview({ ready }, Promise.reject(error), {
+      onError: () => {
+        throw new Error('broken sink')
+      },
+    })
+
+    expect(ready).toHaveBeenCalledWith(undefined)
+    expect(outcome).toStrictEqual({ error, hasFailed: true })
+  })
+
   it('ends the overlay and reports no failure on success', async () => {
     const ready = mockReady()
 
@@ -271,5 +298,18 @@ describe(trySetDocumentLanguage, () => {
     )
 
     expect(onError).toHaveBeenCalledWith(error)
+  })
+
+  it('never aborts over a sink that itself throws', async () => {
+    await expect(
+      trySetDocumentLanguage(
+        vi.fn<() => Promise<string>>().mockRejectedValue(new Error('offline')),
+        () => {
+          throw new Error('broken sink')
+        },
+      ),
+    ).resolves.toBeUndefined()
+
+    expect(document.documentElement.lang).toBe('en')
   })
 })

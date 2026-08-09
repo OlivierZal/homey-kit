@@ -135,19 +135,14 @@ value a grouped control shows: a setting they disagree on collapses to
 
 ## No dependencies, and no peers either
 
-This package declares nothing — no `dependencies`, and deliberately no
-`peerDependencies`. The apps install it as a PRODUCTION dependency (the
-`node` subpath runs on the device), so anything it names is installed on
-the device: a `vitest` peer, optional or not, put 39 packages and 39 MB
-of test framework and bundlers onto a Homey, vulnerabilities included.
-Optional peers do not save you — the consumer's lockfile records the
-link, and `npm ci --omit=dev` installs it.
-
-The two subpaths that need an outside package get it from the consumer
-instead: `./testing` imports `vitest`, which every consumer already has
-as a devDependency, and `./settings` imports `homey` types, which the
-apps have aliased as `@types/homey`. A missing one fails loudly at its
-own call site, in a dev context, which is the right place to learn it.
+This package declares nothing — no `dependencies`, no
+`peerDependencies`, optional or not. The apps install it as a
+production dependency, so anything it named would ship to the device;
+the two subpaths that need an outside package (`./testing` wants
+`vitest`, `./settings` wants the `homey` types) import what every
+consumer already has as a devDependency, and a missing one fails
+loudly at its own call site. The full reasoning and the incident
+behind it live in `CLAUDE.md`.
 
 ## Wiring the type augmentations
 
@@ -207,26 +202,34 @@ narrowing across every call site in the app, and a typo would read
 
 ## Wiring the test kernels
 
-Each app keeps only its tables:
+Each app keeps its tables **and its own `describe`/`it` blocks** — a
+test file that declares no test reads as empty to Sonar and to any
+reader — while the comparisons stay single-sourced here:
 
 ```ts title="tests"
 import {
-  createApiContractSuite,
-  createRouteGuardSuite,
+  analyzeRouteGuards,
+  findContractBreach,
 } from '@olivierzal/homey-kit/testing'
 
-createRouteGuardSuite([
-  {
+it.each(SURFACES)('$name declares exactly its handlers', (surface) => {
+  expect(findContractBreach(surface)).toBeNull()
+})
+
+it('declares every path its webview sources call', async () => {
+  const findings = await analyzeRouteGuards({
     manifest: '.homeycompose/app.json',
     name: 'settings',
     sourceDirs: ['settings'],
-  },
-])
-createApiContractSuite<Handler>([{ api, config: appConfig, name: 'app API' }])
+  })
+
+  expect(findings.undeclaredPaths).toStrictEqual([])
+})
 ```
 
-The `Handler` type parameter is the compile-time half of the contract:
-the call only typechecks when the whole handler union is callable.
+The compile-time half of the contract stays app-side too: asserting
+`expectTypeOf<Handler>().toBeFunction()` over the surface's handler
+union typechecks only when every handler is callable.
 
 ## Wiring the freshness handshake
 
@@ -267,30 +270,19 @@ if (
 }
 ```
 
-**The guarantee lives in the boot check, and the foreground trigger is
-what carries it where no boot happens.** A new document checks itself,
-so every surface that remounts its page is fresh for free — the Homey
-web app tears the settings page down while the app restarts and mounts
-it again, which is why it never looks stale. A mobile webview instead
-survives the restart: no new document, no boot check, and the page
-stays stale indefinitely. `watchWebviewFreshness` re-checks whenever
-the page returns to the foreground, which is the moment that case
-resolves itself.
-
-Do not fold that trigger into the `subscribe` poke. Measured on-device:
-the app emits `webview_hashes_changed` at the end of its own `onInit`,
-i.e. exactly when the restart has just disconnected every open page, so
-its audience is absent by construction — an open page produced no hash
-call and no breadcrumb. The poke is kept because it costs nothing where
-it does arrive; it guarantees nothing anywhere.
+The guarantee lives in the boot check; the foreground trigger carries
+it to the one surface where no boot happens — a mobile webview
+surviving an app restart. Why the `subscribe` poke cannot carry it
+(measured on-device) and why the two must never be folded together is
+maintainer doctrine, in `CLAUDE.md`.
 
 Everything the caller hands over is fenced: a `report` that throws, a
 `subscribe` that throws, a rejecting `fetchHashes`, an unregistrable
 listener or a detached document all degrade the self-heal and never
 stop the page from booting.
 
-`ensureFreshWebview` remains exported for a page that owns its own
-triggers — the widget bootstraps use it directly.
+`ensureFreshWebview` stays exported as the single-check primitive under
+`watchWebviewFreshness`, for a page that owns its own triggers.
 
 `getPageIdentity()` returns what the page compared — the document-order
 join of its `?v=` stamps. Displaying it answers "am I looking at a
@@ -325,29 +317,3 @@ versions only the most recent are returned, the rest counted in
 Emission stays in the app: `createNotification` and the
 `notifiedVersion` write are SDK-coupled, and only the selection is
 shared.
-
-## What belongs here
-
-Two bars, because two different things prove generality.
-
-**Our own code** enters when it is identical in at least two apps, has
-been stable for a full cycle, and carries no hidden coupling to a Homey
-SDK version. Two consumers are the evidence: one app's helper is one
-app's opinion, and hoisting it early freezes a shape nothing has tested
-against a second set of needs.
-
-**Homey's platform surface** enters at one consumer: the SDK transports,
-the `homey-form-*` markup, the boot cycle. Its generality comes from the
-platform, not from our usage — a second app would rediscover the same
-API because the platform hands it the same API. Waiting for that
-rediscovery buys nothing and costs a divergent second implementation,
-which is exactly how the settings pages ended up with three spellings of
-the same element accessor.
-
-The distinction matters because "it looks generic" is available as an
-argument for anything. It is not the test. The test is _where the
-generality comes from_: the platform, or a coincidence between two of
-our apps.
-
-Anything app-specific — ledgers, overrides, manifests, domain builders —
-stays in its app.
