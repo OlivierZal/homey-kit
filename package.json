@@ -1,6 +1,6 @@
 {
   "name": "@olivierzal/homey-kit",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Shared Homey runtime for the OlivierZal apps: webview kit, settings transport, common helpers, table-driven test kernels",
   "keywords": [
     "homey",
