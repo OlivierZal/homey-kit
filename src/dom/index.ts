@@ -307,3 +307,42 @@ export const createSelect = (
   }
   return select
 }
+
+/**
+ * Reads a form control as the domain value it carries: a checkbox as a
+ * tri-state boolean (`null` while indeterminate), a bounded number input
+ * through the caller's number strategy (a settings page throws on an
+ * out-of-range value, a widget clamps it), a boolean string as a
+ * boolean, and anything else as a number when finite, else the raw
+ * string. An empty value reads as `null` — "no instruction", never an
+ * empty-string write.
+ * @param element - The control to read.
+ * @param parseNumber - The bounded-number strategy; omitted by pages
+ * without bounded numeric inputs, whose values take the plain read.
+ * @returns The value, typed by what the control carries.
+ * @category DOM
+ */
+export const parseFormValue = (
+  element: HTMLValueElement,
+  parseNumber?: (input: HTMLInputElement) => number,
+): boolean | number | string | null => {
+  if (element.value !== '') {
+    if (element.type === 'checkbox') {
+      return element.indeterminate ? null : element.checked
+    }
+    if (
+      parseNumber !== undefined &&
+      element.type === 'number' &&
+      element.min !== '' &&
+      element.max !== ''
+    ) {
+      return parseNumber(element)
+    }
+    if (booleanStrings.includes(element.value)) {
+      return element.value === 'true'
+    }
+    const numberValue = Number(element.value)
+    return Number.isFinite(numberValue) ? numberValue : element.value
+  }
+  return null
+}
