@@ -18,7 +18,7 @@ updates:
     schedule:
       interval: weekly
   - commit-message:
-      prefix: ci
+      prefix: build(deps)
     cooldown:
       default-days: 7
     directory: /

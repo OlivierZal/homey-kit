@@ -196,3 +196,12 @@ duplication, new and overall alike), publish via GitHub Release →
 by `npm view` before any "published" claim. Version by the CONTRACT,
 not by observed consumers: a signature change is a major even when
 every known caller already complies.
+
+Dependabot's commit prefixes are pinned to `build(deps)` /
+`build(deps-dev)` — including the `github-actions` entry, which said
+`ci` until 2026-08 purely because this repo was created without the
+family template. The **subject** casing cannot be pinned:
+`commit-message` accepts only `prefix`, `prefix-development` and
+`include`, so Dependabot keeps matching each repo's own history. Left
+alone by decision — a Dependabot commit subject is not a contract, the
+PR title is, and the `PR title` check already holds that one.
