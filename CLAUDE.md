@@ -88,15 +88,14 @@ context, which is the right place to learn it.
   re-derive it by hand: the hand copy this repo once carried had
   drifted in BOTH directions (missed `matchAll`, false-positived
   `Object.entries().map()`).
-- **Device node floor (pending decision)**: `./node`, `./manifest`, the
-  root barrel and `./types` load on the device's OWN Node, which on
-  Homey Pro 2016-2019 rejects the es2024 `v` regex flag at parse time
-  (production crash, 2026-08) and predates the es2023 array methods.
-  Shipped regexes stay `u`. The full API floor awaits Olivier's
-  `platformVersion` measurement; until it lands, do not ADD post-es2022
-  runtime APIs to device-loaded modules (`src/changelog.ts` carries one
-  `toSorted` from before this note — it is part of that pending
-  decision, not a license).
+- **Device node runtime — measured, no API floor**: the fleet
+  measurement (2026-08) put every up-to-date device on the Node class
+  the CI matrix already tests (`Test (Node 22)`), so no API ban-list
+  exists — the 100 % coverage bar makes every shipped line execute
+  under that Node in CI, which is the enforcement. The 2016-2019 crash
+  was a firmware gap, and its one durable lesson stays: SHIPPED REGEXES
+  STAY `u` — a `v` flag fails at parse time on a lagging runtime,
+  before any feature detection can run.
 - `src/testing` is dev-only (runs on the developer's Node) and exempt
   from both floors — which is why its extractors may build `v`-flag
   regexes.
