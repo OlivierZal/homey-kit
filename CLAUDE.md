@@ -160,6 +160,27 @@ fenced FIRST for that reason.
   `super('notFound')` because its settings UI matches on that message —
   never "deduplicate" it blindly.
 
+## Governance files
+
+`SECURITY.md` and `CONTRIBUTING.md` exist here because this package is a
+public npm artifact whose code runs on end-user hardware — the reporting
+path and the local workflow have to be written down, not inferred from a
+sibling repo. The security policy states the distinction triage needs:
+unlike the tooling repos, a vulnerability here reaches devices.
+
+There is deliberately **no `CHANGELOG.md`**: the changelog channel is the
+GitHub release notes, written around what a consuming app must do to
+adopt the release. That is a verdict, not an omission — a second
+file-based history would duplicate the content and let the two drift. The
+obligation it carries is that the notes stay substantial; a channel
+nobody keeps is not a channel.
+
+`.github/dependabot.yml` carries `cooldown: default-days: 7` on both
+update entries, as the six sibling repos do. Without it an automatic bump
+can catch a compromised package inside the window between publication and
+withdrawal (`zizmor/dependabot-cooldown`). This repo simply never received
+it at creation — the same omission as the two governance files.
+
 ## Process
 
 Family process applies: Conventional Commits PR titles (squash, the
