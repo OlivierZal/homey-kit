@@ -25,13 +25,12 @@ Run the FULL suite before any push; check real exit codes:
   import what consumers hold as devDependencies).
 - `npm run typecheck` — tsc (TypeScript 7 via `@typescript/native`).
 - `npm test` / `npm run test:coverage` — vitest; thresholds are 100 %
-  on all four axes, with ONE file-scoped, measured exception pinned in
-  `vitest.config.ts` (`src/testing/api-route-guards.ts`, branches: the
-  remainder is `?? ''` fallbacks on regex groups the patterns
-  guarantee — half-branches no input reaches; its behavior is pinned
-  end to end by the mutation fixtures in
-  `tests/unit/testing-kernels.test.ts`). Never widen an exception
-  silently: measure, pin, and say why here.
+  on all four axes, over the whole of `src/` with no exception. A
+  fallback TypeScript demands on a read no input reaches is closed by
+  restructuring, never by a coverage directive (the kit carries none):
+  a guaranteed regex group reads through `namedGroup`, which throws
+  where the fallback would have handed a sweep an empty path to count
+  as read.
 - `npm run docs` — typedoc; the Pages site deploys on release
   (environment `github-pages` allows `v*` tags — a branch-only policy
   once broke four consecutive deploys silently).

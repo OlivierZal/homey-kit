@@ -8,6 +8,8 @@
 // The declaration half lives in `findContractBreach`.
 import { readdir, readFile } from 'node:fs/promises'
 
+import { namedGroup } from './named-group.ts'
+
 /**
  * One manifest-declared route, the unit every swept call site must
  * match under its own method.
@@ -104,7 +106,7 @@ const stripComments = (source: string): string =>
 const extractPathLiterals = (source: string): string[] =>
   stripComments(source)
     .matchAll(/['"](?<path>\/[a-z][\w\-\/]*)['"]/gv)
-    .map((match) => match.groups?.path ?? '')
+    .map((match) => namedGroup(match, 'path'))
     .toArray()
 
 // Path-shaped template literals are swept wherever they are written,
@@ -114,7 +116,7 @@ const extractPathLiterals = (source: string): string[] =>
 const extractPathTemplates = (source: string): string[] =>
   stripComments(source)
     .matchAll(/`(?<template>\/[a-z][^`]*)`/gv)
-    .map((match) => match.groups?.template ?? '')
+    .map((match) => namedGroup(match, 'template'))
     .toArray()
 
 // The typed helpers carry the verb in their name; the boot beacon calls
@@ -136,14 +138,14 @@ const extractRouteCalls = (source: string): DeclaredRoute[] => {
     ...stripped
       .matchAll(HELPER_CALL)
       .map((match) => ({
-        method: (match.groups?.verb ?? '').toUpperCase(),
-        path: match.groups?.path ?? '',
+        method: namedGroup(match, 'verb').toUpperCase(),
+        path: namedGroup(match, 'path'),
       })),
     ...stripped
       .matchAll(SDK_CALL)
       .map((match) => ({
-        method: match.groups?.verb ?? '',
-        path: match.groups?.path ?? '',
+        method: namedGroup(match, 'verb'),
+        path: namedGroup(match, 'path'),
       })),
   ]
 }
@@ -165,7 +167,9 @@ const escapeRegExp = (chunk: string): string =>
 // A hole can nest braces — `${new URLSearchParams({ … })}` does — so the
 // literal chunks are found by tracking depth, not by a regex that would
 // stop at the first inner `}`. `${` is folded to one sentinel first so
-// the scan reads a single character per step.
+// the scan reads a single character per step; a sentinel met inside a
+// hole closes an empty chunk, which the `.*` join absorbs, so it needs
+// no case of its own.
 const NOT_FOUND = -1
 
 const HOLE = '\u{1}'
@@ -178,10 +182,8 @@ interface TemplateScan {
 
 const scanTemplateChar = (scan: TemplateScan, char: string): void => {
   if (char === HOLE) {
-    if (scan.depth === 0) {
-      scan.chunks.push(scan.literal)
-      scan.literal = ''
-    }
+    scan.chunks.push(scan.literal)
+    scan.literal = ''
     scan.depth += 1
   } else if (char === '{' && scan.depth > 0) {
     scan.depth += 1
@@ -201,19 +203,22 @@ const toTemplateChunks = (template: string): string[] => {
   return scan.chunks
 }
 
-// Declared paths carry no query string, so anything from the first `?`
-// of a literal chunk on is dropped — a `?` inside a hole is part of the
-// hole and never reaches here.
+// Declared paths carry no query string, so a chunk is cut at its first
+// `?`.
+const beforeQuery = (chunk: string): string => {
+  const queryStart = chunk.indexOf('?')
+  return queryStart === NOT_FOUND ? chunk : chunk.slice(0, queryStart)
+}
+
+// Everything from the query chunk on is dropped — a `?` inside a hole is
+// part of the hole and never reaches here.
 const toTemplatePattern = (template: string): RegExp => {
   const chunks = toTemplateChunks(template)
   const queryIndex = chunks.findIndex((chunk) => chunk.includes('?'))
   const pathChunks =
     queryIndex === NOT_FOUND
       ? chunks
-      : [
-          ...chunks.slice(0, queryIndex),
-          (chunks[queryIndex] ?? '').split('?', 1)[0] ?? '',
-        ]
+      : chunks.slice(0, queryIndex + 1).map((chunk) => beforeQuery(chunk))
   return new RegExp(
     `^${pathChunks.map((chunk) => escapeRegExp(chunk)).join('.*')}$`,
     'v',
@@ -230,9 +235,9 @@ const extractTemplateCalls = (source: string): TemplateCall[] =>
   stripComments(source)
     .matchAll(HELPER_TEMPLATE_CALL)
     .map((match) => ({
-      method: (match.groups?.verb ?? '').toUpperCase(),
-      pattern: toTemplatePattern(match.groups?.template ?? ''),
-      template: match.groups?.template ?? '',
+      method: namedGroup(match, 'verb').toUpperCase(),
+      pattern: toTemplatePattern(namedGroup(match, 'template')),
+      template: namedGroup(match, 'template'),
     }))
     .toArray()
 
