@@ -16,6 +16,11 @@ README carries at most a one-line pointer at it.
 
 Run the FULL suite before any push; check real exit codes:
 
+- `npm run build` — purges `dist` before emitting, because `tsc` overwrites
+  but never deletes: a module renamed or removed in `src` would otherwise
+  survive in `dist`, and `files` ships that directory, so `prepare` would
+  pack the fossil. The purge is inline rather than a `prebuild` hook so it
+  cannot be skipped with `--ignore-scripts`.
 - `npm run format` / `npm run format:fix` — prettier (preset from
   `@olivierzal/configs/prettier`, wired through the package.json
   `prettier` key like the rest of the family).
