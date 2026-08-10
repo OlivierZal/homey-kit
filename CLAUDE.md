@@ -3,8 +3,9 @@
 Shared Homey runtime for the OlivierZal apps (`com.melcloud`,
 `com.heatzy`, `com.melcloud.extension`), published to GitHub Packages
 and pinned EXACTLY by every consumer — adoption is a reviewed PR per
-release, never a range. ESM only, Node >= 22.19 for development; what
-SHIPS is bounded by the consumers' devices (see the floors below).
+release, never a range. ESM only, Node >= 22.20 — the measured device
+floor, which development tracks too; what SHIPS is bounded further by
+where each module runs (see the floors below).
 
 The README speaks to the package's CONSUMER (install, subpaths, wiring
 examples); this file speaks to its MAINTAINER. Doctrine evolves HERE
@@ -88,10 +89,12 @@ context, which is the right place to learn it.
   drifted in BOTH directions (missed `matchAll`, false-positived
   `Object.entries().map()`).
 - **Device node runtime — measured, no API floor**: the fleet
-  measurement (2026-08) put every up-to-date device on the Node class
-  the CI matrix already tests (`Test (Node 22)`), so no API ban-list
-  exists — the 100 % coverage bar makes every shipped line execute
-  under that Node in CI, which is the enforcement. The 2016-2019 crash
+  measurement (2026-08) put every up-to-date device at Node 22.20
+  (Pro Early 2019) or 22.23 (Pro 2023), which is what `engines.node`
+  declares — a floor stated from where this code RUNS, never from what
+  a dependency happens to require. No API ban-list exists: the 100 %
+  coverage bar makes every shipped line execute under that Node in CI,
+  which is the enforcement. The 2016-2019 crash
   was a firmware gap, and its one durable lesson stays: SHIPPED REGEXES
   STAY `u` — a `v` flag fails at parse time on a lagging runtime,
   before any feature detection can run.
