@@ -7,6 +7,8 @@ updates:
   - commit-message:
       prefix: build(deps)
       prefix-development: build(deps-dev)
+    cooldown:
+      default-days: 7
     directory: /
     groups:
       minor-and-patch:
@@ -17,6 +19,8 @@ updates:
       interval: weekly
   - commit-message:
       prefix: ci
+    cooldown:
+      default-days: 7
     directory: /
     # One version covers both channels, and the pin check enforces it.
     # Left to Dependabot, the workflow refs would move in their own PR

@@ -1,0 +1,46 @@
+# workflow_run (not pull_request) is deliberate: dependabot-triggered runs
+# get a read-only token and only dependabot secrets, so they cannot reach
+# CLAUDE_CODE_OAUTH_TOKEN — this run executes in the default-branch context
+# instead. Claude pushes through its GitHub App token, which re-triggers CI
+# (a GITHUB_TOKEN push would not), and the dependabot auto-merge workflow
+# then completes the loop once green.
+concurrency:
+  cancel-in-progress: false
+  group: claude-dependabot-fix-${{ github.event.workflow_run.head_branch }}
+jobs:
+  fix:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      packages: read
+      pull-requests: read
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    uses: OlivierZal/configs/.github/workflows/reusable-claude-dependabot-fix.yml@bfaf1d97981a1c05326b4f666ec1a3784b52e8e9 # v3.1.0
+    with:
+      repo-guidance: >-
+        This package is a PRODUCTION dependency of the three Homey apps:
+        its code executes on the device, under the Node floor
+        `engines.node` declares. A bump that raises what the published
+        output requires is a device-facing change, not a tooling one.
+
+        Two channels, one version: when the bump is
+        `@olivierzal/configs`, move the reusable-workflow refs under
+        .github/workflows to the tag matching the new npm pin, in the
+        same commit — the pin check fails otherwise. Resolve that tag's
+        commit rather than guessing it, and keep every version comment
+        at the end of its line.
+
+        Stop and leave the pull request failing for human review when the
+        release changes lint policy — new or stricter rules, a naming
+        default, a runtime floor. Each repository classifies its own
+        violations, and that is a human call.
+      verify-commands: '`npm run format`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run docs`, and `npm run lint:package`'
+name: Claude Dependabot Fix
+on:
+  workflow_run:
+    types: [completed]
+    # The repo's two always-running required build gates (see ruleset).
+    workflows: [CI, zizmor]
+permissions: {}
