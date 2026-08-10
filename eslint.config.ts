@@ -1,13 +1,21 @@
 import type { Config } from 'eslint/config'
 import { library, webviewFloorBlock } from '@olivierzal/configs/eslint'
 
-// The webview modules ship into phone webviews whose engines stall at
-// es2023. The floor itself comes from the shared fragment the Homey
-// preset applies, so it cannot drift from what the apps enforce.
+// Every module a webview bundle can reach carries the es2023 floor:
+// the webview-facing subpaths, plus every flat root module — the root
+// barrel is cross-surface by contract ("cross-surface helpers every
+// consuming app shares"), and the apps do bundle from it
+// (`getErrorMessage` sits in com.melcloud's shipped settings bundle,
+// measured by metafile). A module that needs node-only freedom belongs
+// under a node-only subpath (`node/`, `manifest/`, `testing/`), never
+// the root barrel. The floor itself comes from the shared fragment the
+// Homey preset applies, so it cannot drift from what the apps enforce.
 const WEBVIEW_FLOOR_FILES = [
+  'src/*.ts',
   'src/dom/**/*.ts',
   'src/settings/**/*.ts',
   'src/webview/**/*.ts',
+  'src/widget/**/*.ts',
 ]
 
 const config: Config[] = [
