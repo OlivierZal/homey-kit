@@ -104,9 +104,13 @@ go-to-definition land on real source.
   a dependency happens to require. No API ban-list exists: the 100 %
   coverage bar makes every shipped line execute under that Node in CI,
   which is the enforcement. The 2016-2019 crash
-  was a firmware gap, and its one durable lesson stays: SHIPPED REGEXES
-  STAY `u` — a `v` flag fails at parse time on a lagging runtime,
-  before any feature detection can run.
+  was a firmware gap and is closed; what it surfaced is not. REGEXES IN
+  THE WEBVIEW SUBPATHS STAY `u` — `src/dom`, `src/settings`,
+  `src/webview` ship into phone engines that reject the es2024 `v` flag
+  at parse time, before any feature detection can run, and no Homey
+  update rejuvenates them. Node-side modules take the family default
+  (`v`); the step-down is `webviewFloorBlock`'s job alone, never a
+  second overlay.
 - `src/testing` is dev-only (runs on the developer's Node) and exempt
   from both floors — which is why its extractors may build `v`-flag
   regexes.
