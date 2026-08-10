@@ -79,6 +79,15 @@ every consumer already holds as a devDependency (`./testing` →
 alias), and a missing one fails loudly at its own call site, in a dev
 context, which is the right place to learn it.
 
+`./testing` therefore rides to the device unused, and that is ACCEPTED —
+measured, 2026-08: `dist/testing` is 64 KB installed, against a ~10 MB
+production tree, so under 1 %. Splitting it into a second package is the
+only way to shed it, and the cure is worse: the kernels pin the runtime
+they exercise, so two packages could drift into testing a version that
+is not the one shipping. `src` ships for the same accepted-cost reason —
+the 20 `.d.ts.map`/`.js.map` pairs resolve into it, which is what makes
+go-to-definition land on real source.
+
 ## Runtime floors
 
 - **Webview floor (es2023 APIs, `u` regexes)** on `src/webview`,
