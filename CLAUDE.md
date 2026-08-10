@@ -95,9 +95,15 @@ go-to-definition land on real source.
 
 ## Runtime floors
 
-- **Webview floor (es2023 APIs, `u` regexes)** on `src/webview`,
-  `src/settings` and `src/dom`: these modules bundle into phone
-  webviews, esbuild lowers syntax only, and old iOS engines are real.
+- **Webview floor (es2023 APIs, `u` regexes)** on every module a
+  webview bundle can reach: `src/webview`, `src/settings`, `src/dom`,
+  `src/widget`, and every flat root module — the root barrel is
+  cross-surface by contract, and the apps do bundle from it
+  (`getErrorMessage` sits in com.melcloud's shipped settings bundle,
+  measured 2026-08 by metafile after it had escaped the narrower
+  perimeter). A module that needs node-only freedom belongs under a
+  node-only subpath, never the root barrel. esbuild lowers syntax
+  only, and old iOS engines are real.
   Composed from the configs preset's `webviewFloorBlock` — never
   re-derive it by hand: the hand copy this repo once carried had
   drifted in BOTH directions (missed `matchAll`, false-positived
@@ -110,8 +116,8 @@ go-to-definition land on real source.
   coverage bar makes every shipped line execute under that Node in CI,
   which is the enforcement. The 2016-2019 crash
   was a firmware gap and is closed; what it surfaced is not. REGEXES IN
-  THE WEBVIEW SUBPATHS STAY `u` — `src/dom`, `src/settings`,
-  `src/webview` ship into phone engines that reject the es2024 `v` flag
+  THE FLOOR PERIMETER STAY `u` — the modules above ship into phone
+  engines that reject the es2024 `v` flag
   at parse time, before any feature detection can run, and no Homey
   update rejuvenates them. Node-side modules take the family default
   (`v`); the step-down is `webviewFloorBlock`'s job alone, never a
