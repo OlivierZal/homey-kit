@@ -56,9 +56,11 @@ Three habits follow:
   73 MB to the device that way.
 - **Two runtimes, two floors.** Node-side code follows `engines.node`.
   The `./dom`, `./settings` and `./webview` subpaths ship into phone
-  webviews whose engines stall at **es2023** — a separate, lower ceiling
-  the lint enforces on those paths. Raising one floor never raises the
-  other; conflating them has already caused a production incident.
+  webviews whose ceiling is **es2023**, derived from the Homey mobile
+  app's own iOS 16.4 minimum (App Store, 2026-08-11) — a separate,
+  lower ceiling the lint enforces on those paths. Raising one floor
+  never raises the other; conflating them has already caused a
+  production incident.
 - **A change to a shared primitive is a release plus three adoptions.**
   Prefer the shape that keeps consumers working over the locally tidiest
   one, and say so in the pull request when the surface moves.
