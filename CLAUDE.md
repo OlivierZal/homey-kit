@@ -103,7 +103,9 @@ go-to-definition land on real source.
   measured 2026-08 by metafile after it had escaped the narrower
   perimeter). A module that needs node-only freedom belongs under a
   node-only subpath, never the root barrel. esbuild lowers syntax
-  only, and old iOS engines are real.
+  only, and the worst engine is not hypothetical: the Homey mobile
+  app's iOS 16.4 App Store minimum (read 2026-08-11) is what derives
+  the es2023 ceiling.
   Composed from the configs preset's `webviewFloorBlock` — never
   re-derive it by hand: the hand copy this repo once carried had
   drifted in BOTH directions (missed `matchAll`, false-positived
@@ -117,11 +119,14 @@ go-to-definition land on real source.
   which is the enforcement. The 2016-2019 crash
   was a firmware gap and is closed; what it surfaced is not. REGEXES IN
   THE FLOOR PERIMETER STAY `u` — the modules above ship into phone
-  engines that reject the es2024 `v` flag
-  at parse time, before any feature detection can run, and no Homey
-  update rejuvenates them. Node-side modules take the family default
-  (`v`); the step-down is `webviewFloorBlock`'s job alone, never a
-  second overlay.
+  WebKits as old as iOS 16.4's (the Homey app's App Store minimum,
+  read 2026-08-11), which predate the es2024 `v` flag; under the apps'
+  sub-es2024 esbuild target an escapee ships as a `new RegExp` call
+  and throws at runtime inside the feature that runs it, and no Homey
+  update rejuvenates those engines — the App Store minimum reaching
+  17.4 is what re-opens es2024. Node-side modules take the family
+  default (`v`); the step-down is `webviewFloorBlock`'s job alone,
+  never a second overlay.
 - `src/testing` is dev-only (runs on the developer's Node) and exempt
   from both floors — which is why its extractors may build `v`-flag
   regexes.

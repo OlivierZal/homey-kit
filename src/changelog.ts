@@ -9,10 +9,11 @@
  */
 
 // Validated without a regular expression on purpose: this module sits
-// in the root barrel, which webview code also imports, and the repo's
-// global rule mandates the es2024 `v` flag that phone engines reject at
-// parse time. Tree-shaking keeps it out of those bundles today; not
-// writing the trap keeps it out for good.
+// in the root barrel, which webview code also imports, so it lives
+// inside the webview floor perimeter — a regex here would owe that
+// floor a `u` flag and an es2023 proof. Tree-shaking keeps the module
+// out of those bundles today; not writing the trap keeps it out for
+// good.
 const PART_COUNT = 3
 
 // A user returning after a long absence gets a readable digest, not a
