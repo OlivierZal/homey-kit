@@ -29,7 +29,13 @@ Run the FULL suite before any push; check real exit codes:
   webview floor composed from the preset's `webviewFloorBlock`, and the
   dev-import allowance for `src/settings` and `src/testing` (they
   import what consumers hold as devDependencies).
-- `npm run typecheck` — tsc (TypeScript 7 via `@typescript/native`).
+- `npm run typecheck` — the native TypeScript 7 compiler, reached by its
+  explicit path (`node ./node_modules/@typescript/native/bin/tsc`). A
+  bare `tsc` is NOT the same compiler: under the official 6/7 layout the
+  `.bin/tsc` shim belongs to `@typescript/old`, the TS6 the compat
+  package depends on, so it silently typechecks with TypeScript 6 — the
+  native 7.x ships no shim at all, and `tsc6` is that same TS6. Only the
+  explicit path holds.
 - `npm test` / `npm run test:coverage` — vitest; thresholds are 100 %
   on all four axes, over the whole of `src/` with no exception. A
   fallback TypeScript demands on a read no input reaches is closed by
