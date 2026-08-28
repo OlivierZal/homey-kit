@@ -67,10 +67,13 @@ describe(selectChangelogEntries, () => {
     })
   })
 
-  it('should treat a null stored version as a first install', () => {
+  it.each([
+    { from: null, kind: 'a null stored version' },
+    { from: 'not-a-version', kind: 'an unreadable stored version' },
+  ])('should treat $kind as a first install', ({ from }) => {
     const { entries } = selectChangelogEntries({
       changelog,
-      from: null,
+      from,
       language: 'en',
       to: '2.0.0',
     })
@@ -78,58 +81,26 @@ describe(selectChangelogEntries, () => {
     expect(entries).toStrictEqual([{ excerpt: 'two', version: '2.0.0' }])
   })
 
-  it('should treat an unreadable stored version as a first install', () => {
-    const { entries } = selectChangelogEntries({
-      changelog,
-      from: 'not-a-version',
-      language: 'en',
+  it.each([
+    {
+      case: 'when the running version has no entry on a first install',
+      from: undefined,
+      to: '3.0.0',
+    },
+    {
+      case: 'when the running version is unreadable',
+      from: '1.0.0',
+      to: 'unknown',
+    },
+    {
+      case: 'when the stored version is already the running one',
+      from: '2.0.0',
       to: '2.0.0',
-    })
-
-    expect(entries).toStrictEqual([{ excerpt: 'two', version: '2.0.0' }])
-  })
-
-  it('should announce nothing when the running version has no entry on a first install', () => {
+    },
+    { case: 'on a downgrade', from: '2.0.0', to: '1.0.0' },
+  ])('should announce nothing $case', ({ from, to }) => {
     expect(
-      selectChangelogEntries({
-        changelog,
-        from: undefined,
-        language: 'en',
-        to: '3.0.0',
-      }),
-    ).toStrictEqual({ entries: [], omitted: 0 })
-  })
-
-  it('should announce nothing when the running version is unreadable', () => {
-    expect(
-      selectChangelogEntries({
-        changelog,
-        from: '1.0.0',
-        language: 'en',
-        to: 'unknown',
-      }),
-    ).toStrictEqual({ entries: [], omitted: 0 })
-  })
-
-  it('should announce nothing when the stored version is already the running one', () => {
-    expect(
-      selectChangelogEntries({
-        changelog,
-        from: '2.0.0',
-        language: 'en',
-        to: '2.0.0',
-      }),
-    ).toStrictEqual({ entries: [], omitted: 0 })
-  })
-
-  it('should announce nothing on a downgrade', () => {
-    expect(
-      selectChangelogEntries({
-        changelog,
-        from: '2.0.0',
-        language: 'en',
-        to: '1.0.0',
-      }),
+      selectChangelogEntries({ changelog, from, language: 'en', to }),
     ).toStrictEqual({ entries: [], omitted: 0 })
   })
 
