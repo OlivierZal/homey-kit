@@ -200,46 +200,33 @@ describe(ensureFreshWebview, () => {
     )
   })
 
-  it('should stay put on an unstamped page', async () => {
-    const { replace } = install({ references: [] })
-
-    await expect(
-      ensureFreshWebview('ata-group-setting', serveHashes),
-    ).resolves.toBe(false)
-
-    expect(replace).not.toHaveBeenCalled()
-  })
-
-  it('should ignore an element carrying neither reference attribute', async () => {
-    // Defensive arm: the selector guarantees one attribute in a real
-    // DOM; a double that matches neither must contribute nothing.
-    const { replace } = install({
+  it.each([
+    {
+      entry: 'ata-group-setting',
+      name: 'should stay put on an unstamped page',
+      references: [],
+    },
+    {
+      // Defensive arm: the selector guarantees one attribute in a real
+      // DOM; a double that matches neither must contribute nothing.
+      entry: 'ata-group-setting',
+      name: 'should ignore an element carrying neither reference attribute',
       references: [new FakeReference('data-src', 'index.js?v=aaaa1111')],
-    })
-
-    await expect(
-      ensureFreshWebview('ata-group-setting', serveHashes),
-    ).resolves.toBe(false)
-
-    expect(replace).not.toHaveBeenCalled()
-  })
-
-  it('should ignore references whose stamp is off-shape', async () => {
-    const { replace } = install({
+    },
+    {
+      entry: 'ata-group-setting',
+      name: 'should ignore references whose stamp is off-shape',
       references: [new FakeReference('src', 'index.js?v=NOT-A-HASH')],
-    })
+    },
+    {
+      entry: 'charts',
+      name: 'should stay put when its entry is not served',
+      references: STALE_PAGE,
+    },
+  ])('$name', async ({ entry, references }) => {
+    const { replace } = install({ references })
 
-    await expect(
-      ensureFreshWebview('ata-group-setting', serveHashes),
-    ).resolves.toBe(false)
-
-    expect(replace).not.toHaveBeenCalled()
-  })
-
-  it('should stay put when its entry is not served', async () => {
-    const { replace } = install({ references: STALE_PAGE })
-
-    await expect(ensureFreshWebview('charts', serveHashes)).resolves.toBe(false)
+    await expect(ensureFreshWebview(entry, serveHashes)).resolves.toBe(false)
 
     expect(replace).not.toHaveBeenCalled()
   })
