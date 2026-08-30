@@ -198,7 +198,9 @@ obligation it carries is that the notes stay substantial; a channel
 nobody keeps is not a channel.
 
 `.github/dependabot.yml` carries `cooldown: default-days: 7` on both
-update entries, as the six sibling repos do. Without it an automatic bump
+update entries, as the seven sibling repos do — all eight carry it,
+counted 2026-08-30; the figure read six until `api-core` joined the
+family. Without it an automatic bump
 can catch a compromised package inside the window between publication and
 withdrawal (`zizmor/dependabot-cooldown`). This repo simply never received
 it at creation — the same omission as the two governance files.
