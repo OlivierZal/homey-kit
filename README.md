@@ -273,6 +273,8 @@ and no manifest:
 ```ts title="scripts/bundle"
 import { stampPackagedPages } from '@olivierzal/homey-kit/node'
 
+// `false` only outside the CLI flow (no page copy: nothing to do); a
+// partial tree throws — the pass fails rather than ships without a manifest.
 await stampPackagedPages(OUT_ROOT, [
   { entry: 'settings', page: 'settings/index.html' },
   { entry: 'charts', page: 'widgets/charts/public/index.html' },
