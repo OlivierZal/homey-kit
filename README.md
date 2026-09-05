@@ -31,17 +31,17 @@ range.
 
 ## Subpaths
 
-| Import                           | Contents                                                                                                                                                                                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `selectChangelogEntries`, `sequential`                                                                                                                                   |
-| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …), the Homey form-control builders (`createInput`, `createSelect`, …) and the form-value reader (`parseFormValue`)                                                                      |
-| `@olivierzal/homey-kit/webview`  | The boot cycle (`runWebview`, `withInitTimeout`, `surfaceError`, `fireAndForget`, `trySetDocumentLanguage`), `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity` |
-| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm`                                                                                                                                     |
-| `@olivierzal/homey-kit/widget`   | The promise-native widget SDK typed: `homeyApiGet`/`Post`/`Put`                                                                                                                                                                            |
-| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                   |
-| `@olivierzal/homey-kit/node`     | `getWebviewHashes` — the packaged `webview-hashes.json` reader the freshness route serves                                                                                                                                                  |
-| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                                                                                                                                |
-| `@olivierzal/homey-kit/testing`  | `createApiContractSuite`, `createRouteGuardSuite` and their analysis seams (needs vitest)                                                                                                                                                  |
+| Import                           | Contents                                                                                                                                                                                                                                           |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `selectChangelogEntries`, `sequential`                                                                                                                                           |
+| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …), the Homey form-control builders (`createInput`, `createSelect`, …) and the form-value reader (`parseFormValue`)                                                                              |
+| `@olivierzal/homey-kit/webview`  | The boot cycle (`runWebview`, `withInitTimeout`, `surfaceError`, `fireAndForget`, `trySetDocumentLanguage`), `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity`         |
+| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm` — and `watchSettingsFreshness`, the settings page's whole freshness handshake in one call                                                   |
+| `@olivierzal/homey-kit/widget`   | The promise-native widget SDK typed: `homeyApiGet`/`Post`/`Put`                                                                                                                                                                                    |
+| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                           |
+| `@olivierzal/homey-kit/node`     | The two node-side halves of the freshness handshake: `stampPackagedPages` (+ `stampHtml`, `stampReferences`), the package-time `?v=` stamper that emits `webview-hashes.json`, and `getWebviewHashes`, the runtime reader the route serves         |
+| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                                                                                                                                        |
+| `@olivierzal/homey-kit/testing`  | The analysis seams (`findContractBreach`, `analyzeRouteGuards`, `analyzeWebviewFloor` + `getQuotedEntries`) and the plain helpers every suite shares (`assertDefined`, `getMockCallArg`, `mock`, `settleDetached`, `InteropModule`) — needs vitest |
 
 ## The DOM subpath
 
@@ -231,7 +231,55 @@ The compile-time half of the contract stays app-side too: asserting
 `expectTypeOf<Handler>().toBeFunction()` over the surface's handler
 union typechecks only when every handler is callable.
 
+The webview-floor closure follows the same split: the app reads its own
+perimeter out of its own config files (`getQuotedEntries` extracts the
+quoted entries of the list a key introduces — `const entryPoints = [...]`
+in the bundler script, `webviewFloorFiles: [...]` in the lint config),
+the kernel walks the value-import closure from the bundler's entry
+points and holds it against the floor globs, and the app asserts over
+the findings:
+
+```ts title="tests/unit/webview-floor.test"
+import {
+  analyzeWebviewFloor,
+  getQuotedEntries,
+} from '@olivierzal/homey-kit/testing'
+
+const findings = analyzeWebviewFloor({
+  entryPoints: getQuotedEntries(bundleSource, 'entryPoints'),
+  floorGlobs: getQuotedEntries(eslintSource, 'webviewFloorFiles'),
+  repoRoot: REPO_ROOT,
+})
+
+it('floors every file a webview bundle can emit', () => {
+  expect(findings.uncovered).toStrictEqual([])
+})
+```
+
+The plain helpers (`assertDefined`, `getMockCallArg`, `mock`,
+`settleDetached`, the `InteropModule` shape) come from the same subpath,
+so no app keeps a `tests/helpers.ts` copy of them.
+
 ## Wiring the freshness handshake
+
+The stamps come first, at package time: the bundler script stamps every
+packaged page's local references with a content hash and emits the
+manifest beside them. Only the packaging copy is touched — the
+committed HTML stays unstamped — and the manifest is written only when
+every page copy exists: a standalone suite run (no copies) stamps
+nothing and writes none, a partial tree gets its present pages stamped
+and no manifest:
+
+```ts title="scripts/bundle"
+import { stampPackagedPages } from '@olivierzal/homey-kit/node'
+
+// `false` only outside the CLI flow (no page copy: nothing to do); a
+// partial tree throws — the pass fails rather than ships without a manifest.
+await stampPackagedPages(OUT_ROOT, [
+  { entry: 'settings', page: 'settings/index.html' },
+  { entry: 'charts', page: 'widgets/charts/public/index.html' },
+])
+```
 
 The manifest URL is required: it sits where the app's own bundler
 stamped it, which no path relative to this package can reach. Bind it
@@ -247,25 +295,51 @@ export const readWebviewHashes = async (): Promise<
 > => getWebviewHashes(MANIFEST_URL)
 ```
 
-Pages wire the whole handshake in one call, `watchWebviewFreshness`,
-whose `report` argument is the diagnostics channel: point it at the
+A settings page wires the whole handshake in one call: the `settings`
+entry, the `GET /webview-hashes` route, the `POST /boot-error`
+breadcrumb channel and the app's `webview_hashes_changed` poke are the
+same in every app, so `watchSettingsFreshness` carries them.
+
+```ts title="settings/index"
+if (await watchSettingsFreshness(homey)) {
+  // The document is being replaced: skip this page's own init.
+  return
+}
+```
+
+A widget wires the primitive underneath, `watchWebviewFreshness`, with
+its own transport (the promise-native widget SDK) and its own entry
+key; the `report` argument is the diagnostics channel: point it at the
 app's boot-error route so a refetch that is skipped or that fails to
 heal leaves a trace instead of a silently stale page.
 
-```ts title="settings/index"
+```ts title="widgets/charts/public/index"
+import {
+  fireAndForget,
+  watchWebviewFreshness,
+} from '@olivierzal/homey-kit/webview'
+import { homeyApiGet, homeyApiPost } from '@olivierzal/homey-kit/widget'
+
 if (
   await watchWebviewFreshness({
-    entry: 'settings',
+    entry: 'charts',
     fetchHashes: async () => homeyApiGet(homey, '/webview-hashes'),
     report: (message) => {
-      reportFreshness(homey, message)
+      fireAndForget(
+        homeyApiPost(homey, '/boot-error', {
+          message,
+          name: 'WebviewFreshness',
+        }),
+        () => {
+          // A missed freshness breadcrumb is acceptable.
+        },
+      )
     },
     subscribe: (onPoke) => {
       homey.on('webview_hashes_changed', onPoke)
     },
   })
 ) {
-  // The document is being replaced: skip this page's own init.
   return
 }
 ```

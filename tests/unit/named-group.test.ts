@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { namedGroup } from '../../src/testing/named-group.ts'
+import { namedGroup } from '../../src/named-group.ts'
 
 const matchOf = (pattern: RegExp, source: string): RegExpExecArray => {
   const match = pattern.exec(source)

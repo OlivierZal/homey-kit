@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { mock } from '../../src/testing/helpers.ts'
 import { createDirtyGate } from '../../src/webview/dirty-gate.ts'
-import { mock } from '../helpers.ts'
 
 // The gate is headless: buttons only need a `disabled` slot, fieldsets a
 // `disabled` slot plus an attribute sink, and wired targets only need to

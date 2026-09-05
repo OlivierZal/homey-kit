@@ -1,0 +1,4 @@
+# tests/fixtures holds TEXT the kernels read, not code — its shape is
+# the fixture (a multi-line import the closure walk must cross), which
+# a formatter would collapse.
+tests/fixtures/
