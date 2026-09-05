@@ -1,18 +1,10 @@
+import { coverageDefaults } from '@olivierzal/configs/vitest-coverage'
 import { type ViteUserConfig, defineConfig } from 'vitest/config'
 
 const config: ViteUserConfig = defineConfig({
   test: {
     clearMocks: true,
-    coverage: {
-      include: ['src/**/*.ts'],
-      reporter: ['text', 'lcov'],
-      thresholds: {
-        branches: 100,
-        functions: 100,
-        lines: 100,
-        statements: 100,
-      },
-    },
+    coverage: { ...coverageDefaults, include: ['src/**/*.ts'] },
     include: ['tests/**/*.test.ts'],
   },
 })
