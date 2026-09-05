@@ -52,24 +52,41 @@ describe(analyzeWebviewFloor, () => {
 })
 
 describe(getQuotedEntries, () => {
-  const source =
-    "webviewFloorFiles: ['src/*.ts', 'src/dom/**/*.ts'],\nentryPoints: ['pages/entry.mts']"
+  // The two declaration shapes the apps use, a comment inside one list,
+  // and a later use of the same key that is not a declaration.
+  const source = [
+    "const entryPoints = ['settings/index.mts', 'widgets/charts/public/index.mts']",
+    'webviewFloorFiles: [',
+    "  'public/**/*.mts',",
+    '  // A cross-surface file, held to the floor on purpose.',
+    "  'types/widgets.mts',",
+    '],',
+    'build({ entryPoints: [entryPoint] })',
+  ].join('\n')
 
-  it('should read the quoted entries of the captured list, in order', () => {
-    expect(
-      getQuotedEntries(source, /webviewFloorFiles: \[(?<entries>[^\]]*)\]/gv),
-    ).toStrictEqual(['src/*.ts', 'src/dom/**/*.ts'])
+  it('should read the quoted entries of an assigned list, in order', () => {
+    expect(getQuotedEntries(source, 'entryPoints')).toStrictEqual([
+      'settings/index.mts',
+      'widgets/charts/public/index.mts',
+    ])
   })
 
-  it('should read across every list the pattern captures', () => {
-    expect(
-      getQuotedEntries(source, /: \[(?<entries>[^\]]*)\]/gv),
-    ).toStrictEqual(['src/*.ts', 'src/dom/**/*.ts', 'pages/entry.mts'])
+  it('should read a property list across its lines and comments', () => {
+    expect(getQuotedEntries(source, 'webviewFloorFiles')).toStrictEqual([
+      'public/**/*.mts',
+      'types/widgets.mts',
+    ])
   })
 
-  it('should throw on a pattern that declares no `entries` group', () => {
+  it('should throw on a key that introduces no list literal', () => {
+    expect(() => getQuotedEntries(source, 'floorGlobs')).toThrow(
+      /`floorGlobs` introduces no list literal/v,
+    )
+  })
+
+  it('should throw on a key whose list never closes', () => {
     expect(() =>
-      getQuotedEntries(source, /webviewFloorFiles: \[(?<list>[^\]]*)\]/gv),
-    ).toThrow(/`entries` is not a group of the pattern/v)
+      getQuotedEntries("entryPoints = ['a.mts'", 'entryPoints'),
+    ).toThrow(/`entryPoints` introduces no list literal/v)
   })
 })

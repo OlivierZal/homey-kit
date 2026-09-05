@@ -233,9 +233,11 @@ union typechecks only when every handler is callable.
 
 The webview-floor closure follows the same split: the app reads its own
 perimeter out of its own config files (`getQuotedEntries` extracts the
-quoted lists), the kernel walks the value-import closure from the
-bundler's entry points and holds it against the floor globs, and the
-app asserts over the findings:
+quoted entries of the list a key introduces — `const entryPoints = [...]`
+in the bundler script, `webviewFloorFiles: [...]` in the lint config),
+the kernel walks the value-import closure from the bundler's entry
+points and holds it against the floor globs, and the app asserts over
+the findings:
 
 ```ts title="tests/unit/webview-floor.test"
 import {
@@ -244,8 +246,8 @@ import {
 } from '@olivierzal/homey-kit/testing'
 
 const findings = analyzeWebviewFloor({
-  entryPoints: getQuotedEntries(bundleSource, ENTRY_POINTS),
-  floorGlobs: getQuotedEntries(eslintSource, FLOOR_LIST),
+  entryPoints: getQuotedEntries(bundleSource, 'entryPoints'),
+  floorGlobs: getQuotedEntries(eslintSource, 'webviewFloorFiles'),
   repoRoot: REPO_ROOT,
 })
 

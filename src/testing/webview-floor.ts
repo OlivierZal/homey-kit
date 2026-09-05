@@ -47,8 +47,21 @@ export interface WebviewFloorPerimeter {
   readonly repoRoot: string
 }
 
+const NOT_FOUND = -1
+
 const byName = (left: string, right: string): number =>
   left.localeCompare(right)
+
+// `indexOf` with its sentinel turned into an absence the callers can
+// narrow on instead of comparing against.
+const indexAfter = (
+  source: string,
+  needle: string,
+  from?: number,
+): number | undefined => {
+  const index = source.indexOf(needle, from)
+  return index === NOT_FOUND ? undefined : index
+}
 
 const readRepoFile = (repoRoot: string, relativePath: string): string =>
   readFileSync(path.join(repoRoot, relativePath), 'utf8')
@@ -56,15 +69,14 @@ const readRepoFile = (repoRoot: string, relativePath: string): string =>
 // Globs escape their dots, park `**/` on a placeholder no glob can
 // contain, expand `*`, then expand the parked `**/` — the order keeps
 // the two star forms from consuming each other.
-const toGlobRegex = (glob: string): RegExp =>
-  new RegExp(
-    `^${glob
-      .replaceAll('.', String.raw`\.`)
-      .replaceAll('**/', '\u{1}')
-      .replaceAll('*', String.raw`[^\/]*`)
-      .replaceAll('\u{1}', String.raw`(?:.*\/)?`)}$`,
-    'v',
-  )
+const toGlobRegex = (glob: string): RegExp => {
+  const body = glob
+    .replaceAll('.', String.raw`\.`)
+    .replaceAll('**/', '\u{1}')
+    .replaceAll('*', String.raw`[^\/]*`)
+    .replaceAll('\u{1}', String.raw`(?:.*\/)?`)
+  return new RegExp(`^${body}$`, 'v')
+}
 
 // The repo-relative files a source file pulls in through value imports.
 // A top-level `import type` erases at emit; the matched text carries
@@ -102,23 +114,32 @@ const getEmittedClosure = (
 }
 
 /**
- * Extracts the single-quoted entries of one or more list literals from
- * a config source — the shape both the floor globs and the bundler's
- * entry points are declared in.
+ * Extracts the single-quoted entries of the list literal a key
+ * introduces in a config source — the shape both the floor globs
+ * (`webviewFloorFiles: [...]`) and the bundler's entry points
+ * (`entryPoints = [...]`) are declared in. The list is the first `[`
+ * after the key's first occurrence up to the next `]`; a key that
+ * introduces no list throws instead of yielding an empty sweep.
  * @param source - The config file's text.
- * @param listPattern - Global pattern whose `entries` group captures a list literal's inside; a pattern without that group throws instead of yielding an empty sweep.
+ * @param key - The identifier or property name the list is assigned to.
  * @returns The quoted entries, in declaration order.
+ * @throws When the key introduces no list literal.
  * @category Testing
  */
-export const getQuotedEntries = (
-  source: string,
-  listPattern: RegExp,
-): string[] =>
-  source
-    .matchAll(listPattern)
-    .flatMap((match) => namedGroup(match, 'entries').matchAll(QUOTED_ENTRY))
+export const getQuotedEntries = (source: string, key: string): string[] => {
+  const keyIndex = indexAfter(source, key)
+  const open =
+    keyIndex === undefined ? undefined : indexAfter(source, '[', keyIndex)
+  const close = open === undefined ? undefined : indexAfter(source, ']', open)
+  if (open === undefined || close === undefined) {
+    throw new Error(`\`${key}\` introduces no list literal in the source`)
+  }
+  return source
+    .slice(open + 1, close)
+    .matchAll(QUOTED_ENTRY)
     .map((match) => namedGroup(match, 'entry'))
     .toArray()
+}
 
 /**
  * Walks the emitted closure from the entry points through value imports
