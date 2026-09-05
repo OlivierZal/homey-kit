@@ -37,7 +37,10 @@ Run the FULL suite before any push; check real exit codes:
   native 7.x ships no shim at all, and `tsc6` is that same TS6. Only the
   explicit path holds.
 - `npm test` / `npm run test:coverage` — vitest; thresholds are 100 %
-  on all four axes, over the whole of `src/` with no exception. A
+  on all four axes (the family's `coverageDefaults` fragment from
+  `@olivierzal/configs/vitest-coverage`, which also fixes the
+  reporters; only the `include` glob is this repo's), over the whole of
+  `src/` with no exception. A
   fallback TypeScript demands on a read no input reaches is closed by
   restructuring, never by a coverage directive (the kit carries none):
   a guaranteed regex group reads through `namedGroup`, which throws
