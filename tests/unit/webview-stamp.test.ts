@@ -231,18 +231,38 @@ describe('webview stamping', () => {
     ).resolves.toBe(JSON.stringify(expected))
   })
 
-  it('should write no partial manifest outside the CLI flow', async () => {
-    // Only one page copy exists: a standalone suite run stamps nothing
-    // and must not leave a half-filled manifest behind.
+  it('should write no manifest outside the CLI flow', async () => {
+    // No page copy exists: a standalone suite run has nothing to stamp
+    // and must not leave a manifest behind.
+    await expect(stampPackagedPages(tree.outRoot, PAGES)).resolves.toBe(false)
+    await expect(
+      readFile(path.join(tree.outRoot, 'webview-hashes.json'), 'utf8'),
+    ).rejects.toThrow('ENOENT')
+  })
+
+  it('should fail the packaging pass on a partial tree, naming the missing pages', async () => {
+    // One copy of two: a mistyped page path in the CLI flow, which must
+    // not ship as a release with no manifest.
     await writePage(
       PAGES[0]?.page ?? '',
       '<script defer src="index.js"></script>',
       { 'index.js': 'console.log(1)' },
     )
 
-    await expect(stampPackagedPages(tree.outRoot, PAGES)).resolves.toBe(false)
+    await expect(stampPackagedPages(tree.outRoot, PAGES)).rejects.toThrow(
+      'Packaged page copies are missing for: charts',
+    )
     await expect(
       readFile(path.join(tree.outRoot, 'webview-hashes.json'), 'utf8'),
     ).rejects.toThrow('ENOENT')
+  })
+
+  it('should fail the packaging pass on a reference to a missing asset', async () => {
+    const htmlPath = await writePage(
+      'settings/index.html',
+      '<script defer src="ghost.js"></script>',
+    )
+
+    await expect(stampHtml(htmlPath)).rejects.toThrow('ENOENT')
   })
 })

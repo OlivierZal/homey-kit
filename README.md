@@ -305,19 +305,33 @@ if (await watchSettingsFreshness(homey)) {
 }
 ```
 
-A page that owns different routes (a widget, a page under another
-entry) wires the primitive underneath, `watchWebviewFreshness`, whose
-`report` argument is the diagnostics channel: point it at the app's
-boot-error route so a refetch that is skipped or that fails to heal
-leaves a trace instead of a silently stale page.
+A widget wires the primitive underneath, `watchWebviewFreshness`, with
+its own transport (the promise-native widget SDK) and its own entry
+key; the `report` argument is the diagnostics channel: point it at the
+app's boot-error route so a refetch that is skipped or that fails to
+heal leaves a trace instead of a silently stale page.
 
 ```ts title="widgets/charts/public/index"
+import {
+  fireAndForget,
+  watchWebviewFreshness,
+} from '@olivierzal/homey-kit/webview'
+import { homeyApiGet, homeyApiPost } from '@olivierzal/homey-kit/widget'
+
 if (
   await watchWebviewFreshness({
     entry: 'charts',
     fetchHashes: async () => homeyApiGet(homey, '/webview-hashes'),
     report: (message) => {
-      reportFreshness(homey, message)
+      fireAndForget(
+        homeyApiPost(homey, '/boot-error', {
+          message,
+          name: 'WebviewFreshness',
+        }),
+        () => {
+          // A missed freshness breadcrumb is acceptable.
+        },
+      )
     },
     subscribe: (onPoke) => {
       homey.on('webview_hashes_changed', onPoke)

@@ -113,4 +113,10 @@ describe(getQuotedEntries, () => {
       getQuotedEntries("entryPoints = ['a.mts'", 'entryPoints'),
     ).toThrow(/`entryPoints` introduces no list literal/v)
   })
+
+  it('should throw on a list with no quoted entry rather than sweep nothing', () => {
+    expect(() =>
+      getQuotedEntries('build({ entryPoints: [entryPoint] })', 'entryPoints'),
+    ).toThrow(/`entryPoints` introduces a list with no quoted entry/v)
+  })
 })

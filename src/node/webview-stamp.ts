@@ -98,7 +98,10 @@ const collectHashes = async (
  * pointing at a real file it earns a stamp the page-side DOM query
  * never sees, splitting the builder identity from the page identity —
  * one refetch, then a boot-error on every open. No page carries a
- * commented reference today; delete, never comment out.
+ * commented reference today; delete, never comment out. A reference the
+ * map has no hash for is stamped blank (`?v=`) rather than dropped: the
+ * page collects only non-empty stamps and the identity joins only the
+ * map's values, so neither side counts it.
  * @param html - The page to rewrite.
  * @param hashes - Content hash per referenced file.
  * @returns The page with every local reference stamped.
@@ -167,13 +170,16 @@ export const stampHtml = async (htmlPath: string): Promise<string | null> => {
 
 /**
  * Stamps every packaged page and emits the live-hash manifest the app
- * serves (`GET /webview-hashes`) — only when every page copy exists,
- * i.e. in the CLI flow. A missing copy withholds the manifest (the
- * copies that exist are still stamped), so a partial tree never serves
- * a partial manifest; a standalone suite run has no copies at all.
+ * serves (`GET /webview-hashes`). Three trees, three answers: every
+ * page copy present (the CLI flow) — stamped, manifest written, `true`;
+ * none present (a standalone suite run, which has no packaging copy) —
+ * nothing to do, `false`; SOME present — a mistyped page path in the
+ * CLI flow, which must fail the packaging pass rather than ship a
+ * release with no manifest and a silently disabled handshake.
  * @param outRoot - The packaging target directory.
  * @param pages - The packaged pages and their manifest keys.
  * @returns Whether the manifest was written.
+ * @throws When only some of the page copies exist.
  * @category Node
  */
 export const stampPackagedPages = async (
@@ -186,8 +192,14 @@ export const stampPackagedPages = async (
       await stampHtml(path.join(outRoot, page)),
     ]),
   )
-  if (stampedEntries.some(([, hash]) => hash === null)) {
+  const missing = stampedEntries.filter(([, hash]) => hash === null)
+  if (missing.length === stampedEntries.length) {
     return false
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `Packaged page copies are missing for: ${missing.map(([entry]) => entry).join(', ')}`,
+    )
   }
   await writeFile(
     path.join(outRoot, 'webview-hashes.json'),

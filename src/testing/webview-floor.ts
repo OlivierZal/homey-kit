@@ -164,11 +164,13 @@ const withoutLineComments = (text: string): string =>
  * key's first DECLARING occurrence opens (`key: [` or `key = [`,
  * whitespace tolerated; a mention in a comment or a later use is passed
  * over) up to the next `]`, with its `//` comment lines ignored. A key
- * that introduces no list throws instead of yielding an empty sweep.
+ * that introduces no list, or a list holding no quoted entry, throws
+ * instead of yielding an empty sweep — the guard the apps' suites used
+ * to carry by hand.
  * @param source - The config file's text.
  * @param key - The identifier or property name the list is assigned to.
- * @returns The quoted entries, in declaration order.
- * @throws When the key introduces no list literal.
+ * @returns The quoted entries, in declaration order — never empty.
+ * @throws When the key introduces no list literal, or one with no quoted entry.
  * @category Testing
  */
 export const getQuotedEntries = (source: string, key: string): string[] => {
@@ -177,10 +179,14 @@ export const getQuotedEntries = (source: string, key: string): string[] => {
   if (open === undefined || close === undefined) {
     throw new Error(`\`${key}\` introduces no list literal in the source`)
   }
-  return withoutLineComments(source.slice(open + 1, close))
+  const entries = withoutLineComments(source.slice(open + 1, close))
     .matchAll(QUOTED_ENTRY)
     .map((match) => namedGroup(match, 'entry'))
     .toArray()
+  if (entries.length === 0) {
+    throw new Error(`\`${key}\` introduces a list with no quoted entry`)
+  }
+  return entries
 }
 
 /**
