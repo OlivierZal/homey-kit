@@ -9,15 +9,19 @@ import {
 
 // The fixture tree: an entry point carrying a type-only import (erased
 // at emit), an inline type specifier (retained at emit, so walked), a
+// MIXED multi-line import (type beside value — the apps' real shape), a
 // multi-line value import, a value import crossing directories and a
 // bare specifier, plus a cycle between the helper and the shared consts
-// — the walk must dedupe and terminate on it.
+// — the walk must dedupe and terminate on it. The two multi-line
+// statements pin the cross-line clause: a walk reading one line at a
+// time would lose `mixed.mts` and `pages/lib/helper.mts`.
 const REPO_ROOT = fileURLToPath(new URL('../fixtures/floor/', import.meta.url))
 
 const ENTRY_POINTS = ['pages/entry.mts']
 
 const CLOSURE = [
   'inline-types.mts',
+  'mixed.mts',
   'pages/entry.mts',
   'pages/lib/helper.mts',
   'shared/consts.mts',
@@ -44,6 +48,7 @@ describe(analyzeWebviewFloor, () => {
   it('should report the closure files no floor glob covers', () => {
     expect(analyze(['pages/*.mts'])).toStrictEqual([
       'inline-types.mts',
+      'mixed.mts',
       'pages/lib/helper.mts',
       'shared/consts.mts',
     ])

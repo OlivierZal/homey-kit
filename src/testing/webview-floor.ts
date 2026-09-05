@@ -87,7 +87,10 @@ const toGlobRegex = (glob: string): RegExp => {
 
 // The repo-relative files a source file pulls in through value imports.
 // A top-level `import type` erases at emit; the matched text carries
-// the discrimination, so no optional-group fallback is needed.
+// the discrimination, so no optional-group fallback is needed. The
+// separator normalization is a no-op on POSIX, where every developer
+// machine and CI runner lives; it keeps the closure glob-comparable on
+// a Windows checkout and nothing pins it.
 const getValueImports = (repoRoot: string, file: string): string[] =>
   readRepoFile(repoRoot, file)
     .matchAll(IMPORT_STATEMENT)
