@@ -137,18 +137,14 @@ const readPageCopy = async (htmlPath: string): Promise<string | null> => {
   }
 }
 
-/**
- * Stamps one packaged page in place and returns the identity it now
- * carries.
- * @param htmlPath - The packaged page copy.
- * @returns The page identity, or `null` when there is nothing to stamp.
- * @throws When the page copy exists but cannot be read — only its absence means "nothing to stamp".
- * @category Node
- */
-export const stampHtml = async (htmlPath: string): Promise<string | null> => {
+// What stamping one page copy found: no copy at all, a copy with no
+// local reference to stamp, or the identity the stamped copy carries.
+type PageStamp = 'absent' | 'unstamped' | { readonly identity: string }
+
+const stampPage = async (htmlPath: string): Promise<PageStamp> => {
   const html = await readPageCopy(htmlPath)
   if (html === null) {
-    return null
+    return 'absent'
   }
   const hashes = await collectHashes(html, path.dirname(htmlPath))
   const stamped = stampReferences(html, hashes)
@@ -165,7 +161,46 @@ export const stampHtml = async (htmlPath: string): Promise<string | null> => {
   // twice here would mint an identity no page can ever match — an
   // endless refetch handshake.
   const identity = [...new Set(hashes.values())].join('.')
-  return identity === '' ? null : identity
+  return identity === '' ? 'unstamped' : { identity }
+}
+
+/**
+ * Stamps one packaged page in place and returns the identity it now
+ * carries.
+ * @param htmlPath - The packaged page copy.
+ * @returns The page identity, or `null` when there is nothing to stamp — no copy, or a copy with no local reference.
+ * @throws When the page copy exists but cannot be read — only its absence means "nothing to stamp".
+ * @category Node
+ */
+export const stampHtml = async (htmlPath: string): Promise<string | null> => {
+  const stamp = await stampPage(htmlPath)
+  return typeof stamp === 'string' ? null : stamp.identity
+}
+
+type PageStamps = readonly (readonly [string, PageStamp])[]
+
+// Sorts one tree's stamps into the three states, so each verdict reads
+// its own list and no narrowing is left for a branch no input reaches.
+const sortStamps = (
+  stamps: PageStamps,
+): {
+  absent: string[]
+  identities: [string, string][]
+  unstamped: string[]
+} => {
+  const absent: string[] = []
+  const identities: [string, string][] = []
+  const unstamped: string[] = []
+  for (const [entry, stamp] of stamps) {
+    if (stamp === 'absent') {
+      absent.push(entry)
+    } else if (stamp === 'unstamped') {
+      unstamped.push(entry)
+    } else {
+      identities.push([entry, stamp.identity])
+    }
+  }
+  return { absent, identities, unstamped }
 }
 
 /**
@@ -175,35 +210,44 @@ export const stampHtml = async (htmlPath: string): Promise<string | null> => {
  * none present (a standalone suite run, which has no packaging copy) —
  * nothing to do, `false`; SOME present — a mistyped page path in the
  * CLI flow, which must fail the packaging pass rather than ship a
- * release with no manifest and a silently disabled handshake.
+ * release with no manifest and a silently disabled handshake. A copy
+ * that carries no local reference fails the pass too, named apart from
+ * a missing one: it would have no identity for its page to compare.
  * @param outRoot - The packaging target directory.
  * @param pages - The packaged pages and their manifest keys.
  * @returns Whether the manifest was written.
- * @throws When only some of the page copies exist.
+ * @throws When only some of the page copies exist, or a copy has nothing to stamp.
  * @category Node
  */
 export const stampPackagedPages = async (
   outRoot: string,
   pages: readonly WebviewPage[],
 ): Promise<boolean> => {
-  const stampedEntries = await Promise.all(
-    pages.map(async ({ entry, page }): Promise<[string, string | null]> => [
-      entry,
-      await stampHtml(path.join(outRoot, page)),
-    ]),
+  const stamps = await Promise.all(
+    pages.map(
+      async ({ entry, page }): Promise<readonly [string, PageStamp]> => [
+        entry,
+        await stampPage(path.join(outRoot, page)),
+      ],
+    ),
   )
-  const missing = stampedEntries.filter(([, hash]) => hash === null)
-  if (missing.length === stampedEntries.length) {
+  const { absent, identities, unstamped } = sortStamps(stamps)
+  if (absent.length === stamps.length) {
     return false
   }
-  if (missing.length > 0) {
+  if (absent.length > 0) {
     throw new Error(
-      `Packaged page copies are missing for: ${missing.map(([entry]) => entry).join(', ')}`,
+      `Packaged page copies are missing for: ${absent.join(', ')}`,
+    )
+  }
+  if (unstamped.length > 0) {
+    throw new Error(
+      `Packaged pages carry no local reference to stamp: ${unstamped.join(', ')}`,
     )
   }
   await writeFile(
     path.join(outRoot, 'webview-hashes.json'),
-    JSON.stringify(Object.fromEntries(stampedEntries)),
+    JSON.stringify(Object.fromEntries(identities)),
   )
   return true
 }

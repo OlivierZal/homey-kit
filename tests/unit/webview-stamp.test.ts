@@ -257,6 +257,27 @@ describe('webview stamping', () => {
     ).rejects.toThrow('ENOENT')
   })
 
+  it('should fail the packaging pass on a page with nothing to stamp, named apart from a missing one', async () => {
+    await Promise.all(
+      PAGES.map(async ({ page }, index) =>
+        writePage(
+          page,
+          index === 0
+            ? '<p>No local reference: no identity for the page to compare</p>'
+            : '<script defer src="index.js"></script>',
+          { 'index.js': 'console.log(1)' },
+        ),
+      ),
+    )
+
+    await expect(stampPackagedPages(tree.outRoot, PAGES)).rejects.toThrow(
+      'Packaged pages carry no local reference to stamp: settings',
+    )
+    await expect(
+      readFile(path.join(tree.outRoot, 'webview-hashes.json'), 'utf8'),
+    ).rejects.toThrow('ENOENT')
+  })
+
   it('should fail the packaging pass on a reference to a missing asset', async () => {
     const htmlPath = await writePage(
       'settings/index.html',
