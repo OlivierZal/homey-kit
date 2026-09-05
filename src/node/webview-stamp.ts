@@ -17,7 +17,7 @@ import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { namedGroup } from '../testing/named-group.ts'
+import { namedGroup } from '../named-group.ts'
 
 const HASH_LENGTH = 8
 
@@ -45,6 +45,9 @@ export interface WebviewPage {
   readonly entry: string
   readonly page: string
 }
+
+const isMissingFile = (error: unknown): boolean =>
+  error instanceof Error && 'code' in error && error.code === 'ENOENT'
 
 const hashOf = async (filePath: string): Promise<string> => {
   const content = await readFile(filePath)
@@ -116,20 +119,32 @@ export const stampReferences = (
   return stamped + html.slice(cursor)
 }
 
+// The page copy only exists in the CLI flow; a standalone suite run has
+// nothing to stamp. Anything but its absence is a real failure:
+// answering `null` to a permission error would ship a release with no
+// manifest and a silently disabled handshake.
+const readPageCopy = async (htmlPath: string): Promise<string | null> => {
+  try {
+    return await readFile(htmlPath, 'utf8')
+  } catch (error) {
+    if (isMissingFile(error)) {
+      return null
+    }
+    throw error
+  }
+}
+
 /**
  * Stamps one packaged page in place and returns the identity it now
  * carries.
  * @param htmlPath - The packaged page copy.
  * @returns The page identity, or `null` when there is nothing to stamp.
+ * @throws When the page copy exists but cannot be read — only its absence means "nothing to stamp".
  * @category Node
  */
 export const stampHtml = async (htmlPath: string): Promise<string | null> => {
-  let html: string
-  try {
-    html = await readFile(htmlPath, 'utf8')
-  } catch {
-    // The page copy only exists in the CLI flow; a standalone suite run
-    // has nothing to stamp.
+  const html = await readPageCopy(htmlPath)
+  if (html === null) {
     return null
   }
   const hashes = await collectHashes(html, path.dirname(htmlPath))
@@ -152,9 +167,10 @@ export const stampHtml = async (htmlPath: string): Promise<string | null> => {
 
 /**
  * Stamps every packaged page and emits the live-hash manifest the app
- * serves (`GET /webview-hashes`) — only in the CLI flow, where every
- * page copy exists: a standalone suite run stamps nothing and must not
- * leave a partial manifest.
+ * serves (`GET /webview-hashes`) — only when every page copy exists,
+ * i.e. in the CLI flow. A missing copy withholds the manifest (the
+ * copies that exist are still stamped), so a partial tree never serves
+ * a partial manifest; a standalone suite run has no copies at all.
  * @param outRoot - The packaging target directory.
  * @param pages - The packaged pages and their manifest keys.
  * @returns Whether the manifest was written.

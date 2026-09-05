@@ -62,17 +62,21 @@ describe(mock, () => {
 
 describe(settleDetached, () => {
   it('should resolve once a detached microtask chain has settled', async () => {
-    const steps: string[] = []
+    // Long enough that a drain of any fixed number of microtask turns
+    // would resolve mid-chain; only a macrotask turn settles it whole.
+    const LENGTH = 50
+    const steps: number[] = []
     const detached = (async (): Promise<void> => {
-      await Promise.resolve()
-      steps.push('first')
-      await Promise.resolve()
-      steps.push('second')
+      for (let step = 0; step < LENGTH; step += 1) {
+        // eslint-disable-next-line no-await-in-loop -- the chain is the point: each step is one microtask turn
+        await Promise.resolve()
+        steps.push(step)
+      }
     })()
 
     await settleDetached()
 
-    expect(steps).toStrictEqual(['first', 'second'])
+    expect(steps).toHaveLength(LENGTH)
 
     await detached
   })

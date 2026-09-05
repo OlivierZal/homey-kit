@@ -8,7 +8,7 @@
 // The declaration half lives in `findContractBreach`.
 import { readdir, readFile } from 'node:fs/promises'
 
-import { namedGroup } from './named-group.ts'
+import { namedGroup } from '../named-group.ts'
 
 /**
  * One manifest-declared route, the unit every swept call site must

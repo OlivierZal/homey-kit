@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -41,6 +42,11 @@ const writePage = async (
 
 const readPage = async (htmlPath: string): Promise<string> =>
   readFile(htmlPath, 'utf8')
+
+// The stamp contract, restated independently of the producer: the first
+// eight hex digits of the asset's SHA-256.
+const hashOf = (content: string): string =>
+  createHash('sha256').update(content).digest('hex').slice(0, 8)
 
 const stampsOf = (html: string): string[] =>
   html
@@ -196,6 +202,12 @@ describe('webview stamping', () => {
     ).resolves.toBeNull()
   })
 
+  it('should fail on a page copy that exists but cannot be read', async () => {
+    // Only absence means "nothing to stamp": a directory where the page
+    // should be is a broken packaging tree, not a standalone run.
+    await expect(stampHtml(tree.outRoot)).rejects.toThrow('EISDIR')
+  })
+
   it('should emit the manifest once every page is stamped', async () => {
     await Promise.all(
       PAGES.map(async ({ page }) =>
@@ -205,15 +217,11 @@ describe('webview stamping', () => {
       ),
     )
 
-    // Stamping is idempotent, so each page's identity read here is the
-    // one the manifest must carry, keyed by entry in declaration order.
+    // The oracle is the hash itself, computed here rather than read back
+    // through the unit under test: each page carries one asset, so its
+    // identity is that asset's hash, keyed by entry in declaration order.
     const expected = Object.fromEntries(
-      await Promise.all(
-        PAGES.map(async ({ entry, page }): Promise<[string, string | null]> => [
-          entry,
-          await stampHtml(path.join(tree.outRoot, page)),
-        ]),
-      ),
+      PAGES.map(({ entry, page }) => [entry, hashOf(`console.log('${page}')`)]),
     )
 
     await expect(stampPackagedPages(tree.outRoot, PAGES)).resolves.toBe(true)

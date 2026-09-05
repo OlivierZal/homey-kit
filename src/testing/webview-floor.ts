@@ -8,12 +8,19 @@
  * extracts its own perimeter (entry points, floor globs) from its own
  * config files and declares its own `describe`/`it` over the findings;
  * the closure walk and the glob matching stay single-sourced here.
+ *
+ * The walk follows `import … from` statements only: a side-effect
+ * import (`import './x'`) or a re-export (`export … from './x'`) is not
+ * an edge it knows, and an inline type specifier (`import { type X }`)
+ * counts as a value edge — under `verbatimModuleSyntax` the statement
+ * is retained and the module bundled. No app's webview code uses the
+ * first two shapes (measured 2026-09); teach the walk before one does.
  * @packageDocumentation
  */
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
-import { namedGroup } from './named-group.ts'
+import { namedGroup } from '../named-group.ts'
 
 // One statement spans from `import` to its single `from` clause; the
 // lazy quantifier stops at the first, so statements never bleed into
@@ -113,13 +120,51 @@ const getEmittedClosure = (
   return [...closure].toSorted(byName)
 }
 
+const WHITESPACE = new Set([' ', '\t', '\r', '\n'])
+
+const ASSIGNERS = new Set([':', '='])
+
+const skipWhitespace = (source: string, from: number): number => {
+  let index = from
+  while (WHITESPACE.has(source.charAt(index))) {
+    index += 1
+  }
+  return index
+}
+
+// Where the list a key introduces opens: the key, whitespace, `:` or
+// `=`, whitespace, `[` — the two declaration shapes the apps use. Any
+// other occurrence of the key (a comment, a later use as a value) is
+// passed over.
+const findListOpen = (source: string, key: string): number | undefined => {
+  let keyIndex = indexAfter(source, key)
+  while (keyIndex !== undefined) {
+    const assigner = skipWhitespace(source, keyIndex + key.length)
+    const open = skipWhitespace(source, assigner + 1)
+    if (ASSIGNERS.has(source.charAt(assigner)) && source.charAt(open) === '[') {
+      return open
+    }
+    keyIndex = indexAfter(source, key, keyIndex + 1)
+  }
+  return undefined
+}
+
+// A `//` line inside the list is prose, and prose may hold a quote.
+const withoutLineComments = (text: string): string =>
+  text
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('//'))
+    .join('\n')
+
 /**
  * Extracts the single-quoted entries of the list literal a key
  * introduces in a config source — the shape both the floor globs
  * (`webviewFloorFiles: [...]`) and the bundler's entry points
- * (`entryPoints = [...]`) are declared in. The list is the first `[`
- * after the key's first occurrence up to the next `]`; a key that
- * introduces no list throws instead of yielding an empty sweep.
+ * (`const entryPoints = [...]`) are declared in. The list is the one the
+ * key's first DECLARING occurrence opens (`key: [` or `key = [`,
+ * whitespace tolerated; a mention in a comment or a later use is passed
+ * over) up to the next `]`, with its `//` comment lines ignored. A key
+ * that introduces no list throws instead of yielding an empty sweep.
  * @param source - The config file's text.
  * @param key - The identifier or property name the list is assigned to.
  * @returns The quoted entries, in declaration order.
@@ -127,15 +172,12 @@ const getEmittedClosure = (
  * @category Testing
  */
 export const getQuotedEntries = (source: string, key: string): string[] => {
-  const keyIndex = indexAfter(source, key)
-  const open =
-    keyIndex === undefined ? undefined : indexAfter(source, '[', keyIndex)
+  const open = findListOpen(source, key)
   const close = open === undefined ? undefined : indexAfter(source, ']', open)
   if (open === undefined || close === undefined) {
     throw new Error(`\`${key}\` introduces no list literal in the source`)
   }
-  return source
-    .slice(open + 1, close)
+  return withoutLineComments(source.slice(open + 1, close))
     .matchAll(QUOTED_ENTRY)
     .map((match) => namedGroup(match, 'entry'))
     .toArray()

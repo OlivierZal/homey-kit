@@ -265,8 +265,10 @@ so no app keeps a `tests/helpers.ts` copy of them.
 The stamps come first, at package time: the bundler script stamps every
 packaged page's local references with a content hash and emits the
 manifest beside them. Only the packaging copy is touched — the
-committed HTML stays unstamped, and a standalone suite run (no copy)
-stamps nothing and writes no manifest:
+committed HTML stays unstamped — and the manifest is written only when
+every page copy exists: a standalone suite run (no copies) stamps
+nothing and writes none, a partial tree gets its present pages stamped
+and no manifest:
 
 ```ts title="scripts/bundle"
 import { stampPackagedPages } from '@olivierzal/homey-kit/node'

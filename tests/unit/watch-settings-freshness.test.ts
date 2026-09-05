@@ -91,9 +91,10 @@ const install = ({
       return
     }
     if (method === 'POST' && path === '/boot-error' && isCallback(fourth)) {
-      // The breadcrumb channel answers like the SDK does, so the
-      // swallowing callback actually runs.
-      fourth(null)
+      // The breadcrumb channel answers with a FAILURE, as the SDK would
+      // for a lost route: the callback must swallow it, or the report
+      // would surface where the handshake promised silence.
+      fourth(new Error('breadcrumb lost'))
     }
   })
   const homey = mock<Homey>({

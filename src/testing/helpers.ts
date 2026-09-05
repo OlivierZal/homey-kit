@@ -88,7 +88,8 @@ export function mock(overrides: object = {}): unknown {
 /**
  * Drains the microtask chains a detached (fire-and-forget) run leaves
  * behind: one macrotask turn settles them all when the mocks resolve
- * synchronously.
+ * synchronously. The turn is a `setImmediate`: under fake timers that
+ * fake it, advance them or keep it real, or the drain never resolves.
  * @returns Resolves after one macrotask turn.
  * @category Testing
  */
