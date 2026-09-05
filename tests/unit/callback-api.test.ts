@@ -9,7 +9,7 @@ import {
   homeyCallback,
   homeyConfirm,
 } from '../../src/settings/callback-api.ts'
-import { mock } from '../helpers.ts'
+import { mock } from '../../src/testing/helpers.ts'
 
 type ErrorFirst = (error: Error | null, result: unknown) => void
 

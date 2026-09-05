@@ -70,11 +70,13 @@ single app's taste. App-specific ledgers, overrides and manifests stay
 in their app; no native-Homey behavior overrides.
 
 **Layered exports are deliberate, not ghosts**: `ensureFreshWebview`
-under `watchWebviewFreshness`, `withInitTimeout` under `runWebview`,
-`getPageIdentity` beside both, `configureNumericInput` under
-`createInput`. The orchestrator is the documented path; the primitive
-stays public for a consumer that owns the orchestration. Do not remove
-a primitive because only the orchestrator calls it today.
+under `watchWebviewFreshness`, itself under `watchSettingsFreshness`
+(the settings page's fixed routes), `withInitTimeout` under
+`runWebview`, `getPageIdentity` beside both, `configureNumericInput`
+under `createInput`, `stampHtml`/`stampReferences` under
+`stampPackagedPages`. The orchestrator is the documented path; the
+primitive stays public for a consumer that owns the orchestration. Do
+not remove a primitive because only the orchestrator calls it today.
 
 ## No dependencies, and no peers either
 
