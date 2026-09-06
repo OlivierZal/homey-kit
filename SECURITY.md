@@ -16,9 +16,10 @@ device, inside the app process.
 Two consequences for a report:
 
 - A vulnerability here reaches **end-user hardware**, not just a build
-  environment. The `./webview` and `./settings` subpaths additionally run
-  inside phone webviews, so anything touching how they handle values
-  crossing that boundary is in scope.
+  environment. The `./dom`, `./settings`, `./webview` and `./widget`
+  subpaths, plus the root barrel, additionally run inside phone
+  webviews, so anything touching how they handle values crossing that
+  boundary is in scope.
 - The package declares **no runtime dependency**, by design. That keeps
   the reachable surface to this repository's own code — so a report about
   transitive risk is best directed at the consuming app, which owns the

@@ -95,13 +95,29 @@ every consumer already holds as a devDependency (`./testing` →
 alias), and a missing one fails loudly at its own call site, in a dev
 context, which is the right place to learn it.
 
+The bare `homey-apps-sdk-v3-types` devDependency beside the
+`@types/homey` alias is NOT a leftover of the dropped peer, and the two
+lines move together on every SDK-types bump. The alias is what lets
+`homey/lib/…` resolve for TypeScript; the bare name is what satisfies
+`import-x/no-extraneous-dependencies`, which checks the RESOLVED
+package's real `name` against the manifest and never maps `homey` to
+`@types/homey` — and the library preset runs it with `includeTypes:
+true`, so the two settings tests' `import type … from
+'homey/lib/HomeySettings.js'` need the bare name declared (measured
+2026-09-06: removing it fails lint on exactly those two files, and
+nothing else — typecheck, tests and build all still pass, which is why
+it reads as dead to a grep).
+
 `./testing` therefore rides to the device unused, and that is ACCEPTED —
-measured, 2026-08: `dist/testing` is 64 KB installed, against a ~10 MB
-production tree, so under 1 %. Splitting it into a second package is the
-only way to shed it, and the cure is worse: the kernels pin the runtime
-they exercise, so two packages could drift into testing a version that
-is not the one shipping. `src` ships for the same accepted-cost reason —
-the 20 `.d.ts.map`/`.js.map` pairs resolve into it, which is what makes
+re-measured 2026-09-06, after #72 hoisted the helpers and the floor
+kernel into it: `dist/testing` is 48 KB apparent (104 KB in 4 KB
+blocks) against a production tree of roughly 10 MB (measured 2026-08),
+so about 1 % at worst. Splitting it into a second package is the only way to
+shed it, and the cure is worse: the kernels pin the runtime they
+exercise, so two packages could drift into testing a version that is
+not the one shipping. `src` ships for the same accepted-cost reason —
+every `.d.ts.map`/`.js.map` pair (one per `src` module, so the count
+moves with each hoist) resolves into it, which is what makes
 go-to-definition land on real source.
 
 ## Runtime floors
