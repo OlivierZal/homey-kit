@@ -52,15 +52,20 @@ Three habits follow:
 
 - **Declare no runtime dependency.** Zero dependencies and zero peers is
   a deliberate property: an optional peer still lands in a consumer's
-  production tree, and a measured regression once shipped 67 packages and
-  73 MB to the device that way.
+  production tree, and a measured regression once shipped a whole test
+  framework and its bundlers to the device that way (the measured
+  figures live in [`CLAUDE.md`](CLAUDE.md), and only there).
 - **Two runtimes, two floors.** Node-side code follows `engines.node`.
-  The `./dom`, `./settings` and `./webview` subpaths ship into phone
-  webviews whose ceiling is **es2023**, derived from the Homey mobile
-  app's own iOS 16.4 minimum (App Store, 2026-08-11) — a separate,
-  lower ceiling the lint enforces on those paths. Raising one floor
-  never raises the other; conflating them has already caused a
-  production incident.
+  The `./dom`, `./settings`, `./webview` and `./widget` subpaths, plus
+  every flat root module (the root barrel is cross-surface by contract,
+  and the apps bundle from it), ship into phone webviews whose ceiling
+  is **es2023**, derived from the Homey mobile app's own iOS 16.4
+  minimum (App Store, 2026-08-11) — a separate, lower ceiling the lint
+  enforces on exactly those paths (`WEBVIEW_FLOOR_FILES` in
+  [`eslint.config.ts`](eslint.config.ts); the doctrine is under
+  "Runtime floors" in [`CLAUDE.md`](CLAUDE.md)). Raising one floor never
+  raises the other; conflating them has already caused a production
+  incident.
 - **A change to a shared primitive is a release plus three adoptions.**
   Prefer the shape that keeps consumers working over the locally tidiest
   one, and say so in the pull request when the surface moves.

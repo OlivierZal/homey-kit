@@ -24,9 +24,10 @@ import { namedGroup } from '../named-group.ts'
 
 // One statement spans from `import` to its single `from` clause; the
 // lazy quantifier stops at the first, so statements never bleed into
-// each other even without semicolons.
+// each other even without semicolons. Only the specifier is captured:
+// the consumer discriminates `import type` on the matched text itself.
 const IMPORT_STATEMENT =
-  /^import(?<typeOnly> type)? (?<clause>[\s\S]*?)from '(?<specifier>[^']+)'/gmv
+  /^import(?: type)? [\s\S]*?from '(?<specifier>[^']+)'/gmv
 
 const QUOTED_ENTRY = /'(?<entry>[^']+)'/gv
 

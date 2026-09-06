@@ -316,11 +316,10 @@ export const createSelect = (
 /**
  * Reads a form control as the domain value it carries: a checkbox as a
  * tri-state boolean (`null` while indeterminate), a bounded number input
- * through the caller's number strategy (a settings page throws on an
- * out-of-range value, a widget clamps it), a boolean string as a
- * boolean, and anything else as a number when finite, else the raw
- * string. An empty value reads as `null` — "no instruction", never an
- * empty-string write.
+ * through the caller's number strategy when one is given, a boolean
+ * string as a boolean, and anything else as a number when finite, else
+ * the raw string. An empty value reads as `null` — "no instruction",
+ * never an empty-string write.
  * @param element - The control to read.
  * @param parseNumber - The bounded-number strategy; omitted by pages
  * without bounded numeric inputs, whose values take the plain read.
