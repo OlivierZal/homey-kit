@@ -215,7 +215,8 @@ fenced FIRST for that reason.
   refuses, and no consumer reaches such a default — each app keeps its
   `prefixKey`/`settingKey` narrowing, with its boundary comment, beside
   its own settings type. A default nothing reaches is the kind of branch
-  the 100 % bar rejects (see `parseFormValue` below).
+  the 100 % bar rejects (see `parseFormValue` below for the one such
+  branch the contract keeps until the next major).
 - `announceChangelog` takes the Homey instance as its scheduler (its
   `setTimeout` is `this`-bound and disposed at uninit — never hand it a
   bare `setTimeout`), owns the `notifiedVersion` key and the ten-second
@@ -224,13 +225,38 @@ fenced FIRST for that reason.
   `homey.settings` fits without a `(key: string)` widening
   (`tests/types/structural-hosts.ts` pins that, together with the real
   `Homey`/`HomeyWidget` types against the scheduler and the widget host).
-- `parseFormValue` KEEPS its `parseNumber` strategy parameter — the
-  2026-09 verdict on the "reached by no consumer" finding: rather than
-  the kit dropping the branch (a `./dom` signature change, a major), the
-  second reader in the family adopts it — com.heatzy imports
-  `parseFormValue` with its bounded-number strategy and deletes its
-  local `processValue`. The branch gains a consumer; the signature does
-  not move.
+- `parseFormValue` KEEPS its `parseNumber` strategy parameter through
+  5.x, and it is scheduled for removal in the next major — the 2026-09
+  verdict on the "reached by no consumer" finding, corrected once by the
+  dry adoptions. The draft verdict had the second reader (com.heatzy)
+  adopt the reader WITH its bounded-number strategy, and it cannot:
+  every device-setting control that page builds is a `<select>`
+  (`createSelect` over `booleanOptions` or the manifest's dropdown ids),
+  and the strategy branch opens only for a `type="number"` input
+  carrying both bounds. com.melcloud's two call sites are
+  single-argument, and its one page with bounded number inputs (the
+  protection min/max pairs) applies its throwing, localized strategy to
+  the input directly and clamps the pair on the write — the hook is
+  bypassed by the only page that has such a strategy. So after 5.2.0
+  the branch has NO consumer in the family: com.heatzy imports
+  `parseFormValue(element)` plain and deletes its local `processValue`,
+  which is the two-apps bar met for the READER, not for the strategy.
+  Dropping the parameter is a `./dom` signature change — a major by
+  the contract, whatever the callers pass — so it rides to 6.0.0; until
+  then the kit's own tests keep the branch covered, and a consumer that
+  needs a bounds strategy re-enters it with that consumer.
+- `parseFormValue` reads numbers by VALUE, not by control: a `<select>`
+  whose option ids are numeric strings reads as numbers (com.melcloud's
+  temperature-grid select relies on it — never gate the coercion on
+  `type === 'number'`), so a page whose dropdown ids are words on the
+  wire keeps them words: a numeric-looking id would be written as a
+  number the driver never declared and read as divergent from its
+  stored value forever. Neither app is hit (com.heatzy's ids are
+  `cft`/`eco`/`previous`, pinned by its
+  `tests/unit/device-settings-contract.test.ts`; com.melcloud's composed
+  manifest carries no numeric dropdown id, counted 2026-09-07). The
+  constraint lives on the consumer's manifest; the kit states it beside
+  the reader and the README carries the pointer.
 
 ## Governance files
 

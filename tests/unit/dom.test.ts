@@ -278,6 +278,9 @@ describe(parseFormValue, () => {
     expect(parseFormValue(checkbox)).toBeNull()
   })
 
+  // The strategy parameter is passed by no consumer in the family and is
+  // scheduled out in the next major; while the contract keeps it, these
+  // two tests keep the branch covered (see CLAUDE.md).
   it('should hand a bounded number input to the number strategy', () => {
     const input = createInput({
       id: 'target',
@@ -332,7 +335,10 @@ describe(parseFormValue, () => {
     expect(parseFormValue(select)).toBe(false)
   })
 
-  it('should read a finite numeric string as a number', () => {
+  // By value, not by control: a select's numeric option id reads as a
+  // number — the coercion a consumer's dropdown ids must be classified
+  // against (see CLAUDE.md).
+  it('should read a finite numeric string as a number, from a select too', () => {
     const select = createSelect('speed', [{ id: '42', label: 'Fast' }])
     select.value = '42'
 

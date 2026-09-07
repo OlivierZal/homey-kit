@@ -67,6 +67,14 @@ const input = createInput({ className: 'homey-form-input', id, type })
 getFieldset('login').append(createLabel(input, title, 'homey-form-label'))
 ```
 
+`parseFormValue` reads by value, not by control: a finite numeric string
+is a number whether it comes from a number input or a select (a
+temperature grid built as a select reads as numbers), so a page whose
+dropdown ids are words on the wire keeps them words — pin the manifest in
+a test rather than the reader. Its optional `parseNumber` strategy (a
+`type="number"` input carrying both bounds) is passed by no app and goes
+in the next major; the verdict is in CLAUDE.md.
+
 Anything tied to one app's domain stays in that app — zone pickers, log
 rows, comboboxes.
 
