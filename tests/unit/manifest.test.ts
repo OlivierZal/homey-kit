@@ -106,6 +106,29 @@ describe(getDriverSettings, () => {
     ).toStrictEqual([])
   })
 
+  // The manifest admits a plain string where the kit once typed
+  // localized strings only: the label is the string, in every language.
+  it('should serve a plain-string driver name as the label in any language', () => {
+    expect(
+      getDriverSettings(
+        {
+          id: 'heatzy',
+          name: 'Heatzy',
+          settings: [
+            {
+              children: [
+                { id: 'on_mode', label: { en: 'On mode' }, type: 'dropdown' },
+              ],
+              id: 'general',
+              label: { en: 'General' },
+            },
+          ],
+        },
+        'fr',
+      ),
+    ).toMatchObject([{ driverId: 'heatzy', driverLabel: 'Heatzy' }])
+  })
+
   it('should yield nothing for a group without children', () => {
     expect(
       getDriverSettings(
