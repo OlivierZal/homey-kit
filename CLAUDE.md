@@ -4,8 +4,14 @@ Shared Homey runtime for the OlivierZal apps (`com.melcloud`,
 `com.heatzy`, `com.melcloud.extension`), published to GitHub Packages
 and pinned EXACTLY by every consumer — adoption is a reviewed PR per
 release, never a range. ESM only, Node >= 22.20 — the measured device
-floor, which development tracks too; what SHIPS is bounded further by
-where each module runs (see the floors below).
+floor `engines` declares; what SHIPS is bounded further by where each
+module runs (see the floors below). `.nvmrc` names a DIFFERENT number
+on purpose: 22.22.2, the family's install floor — the lowest Node the
+tooling `@olivierzal/configs` pulls into every tree installs on,
+derived in configs (from `eslint-plugin-package-json`'s
+`^22.22.2 || >=24.15.0`, 2026-09-07) and re-derived there when the tree
+moves, never nudged by hand here. A fresh clone needs the install floor;
+the device needs the device floor; neither line is the other.
 
 The README speaks to the package's CONSUMER (install, subpaths, wiring
 examples); this file speaks to its MAINTAINER. Doctrine evolves HERE
@@ -20,7 +26,12 @@ Run the FULL suite before any push; check real exit codes:
   but never deletes: a module renamed or removed in `src` would otherwise
   survive in `dist`, and `files` ships that directory, so `prepare` would
   pack the fossil. The purge is inline rather than a `prebuild` hook so it
-  cannot be skipped with `--ignore-scripts`.
+  cannot be skipped with `--ignore-scripts`. `tsconfig.build.json`
+  extends the plain `@olivierzal/configs/tsconfig/library` base beside
+  its own path options (`outDir`, `rootDir`, `include` — paths in an
+  extended tsconfig resolve relative to the base, so the base carries
+  none): the `-build` alias configs 5.0.0 retired was a content-free
+  shell of that base, and this repo was its one consumer.
 - `npm run format` / `npm run format:fix` — prettier (preset from
   `@olivierzal/configs/prettier`, wired through the package.json
   `prettier` key like the rest of the family).
@@ -46,9 +57,26 @@ Run the FULL suite before any push; check real exit codes:
   a guaranteed regex group reads through `namedGroup`, which throws
   where the fallback would have handed a sweep an empty path to count
   as read.
-- `npm run docs` — typedoc; the Pages site deploys on release
-  (environment `github-pages` allows `v*` tags — a branch-only policy
-  once broke four consecutive deploys silently).
+- `npm run docs` — typedoc; the Pages site deploys on release through
+  the family's `reusable-docs.yml` — `docs.yml` is a stub over it since
+  the configs 5.0.0 adoption, granting what the called jobs claim
+  (contents and packages read, pages and id-token write) and nothing
+  more, and the called jobs run THIS repo's
+  `.github/actions/setup-node-and-install`, so the composite action
+  stays. The stub's `workflow_dispatch` takes `dry-run: true`, which
+  builds and packs the site without deploying: dispatch it once after
+  every re-pin of the release path and watch the build half succeed
+  before a release reaches the deploy half (environment `github-pages`
+  allows `v*` tags — a branch-only policy once broke four consecutive
+  deploys silently). `typedoc` and the two plugins the preset names
+  (`typedoc-plugin-coverage`, `typedoc-plugin-mdn-links`) are pinned as
+  devDependencies HERE, and that is the whole contract: since 5.0.0
+  configs declares none of the three in any field the installer reads —
+  an optional peer is not optional through GitHub Packages, which strips
+  `peerDependenciesMeta` from the packument, so the 4.x `typedoc` peer
+  had been reaching the apps' production-facing locks as a mandatory
+  one. The majors proven by configs' own typedoc run are 0.28 / 4 / 5;
+  Dependabot moves the pins here.
 - `npm run lint:package` — build + `publint --strict`.
 
 ## What enters the kit — two bars
@@ -287,10 +315,15 @@ Family process applies: Conventional Commits PR titles (squash, the
 title IS the commit), CI green + Copilot threads resolved before merge,
 Sonar zero on BOTH windows verified BEFORE merge (issues and
 duplication, new and overall alike), publish via GitHub Release →
-`publish.yml` (GitHub Packages, provenance-attested), registry proven
-by `npm view` before any "published" claim. Version by the CONTRACT,
-not by observed consumers: a signature change is a major even when
-every known caller already complies.
+`publish.yml`, a stub over the family's `reusable-publish.yml` since the
+configs 5.0.0 adoption (GitHub Packages, provenance-attested; the `npm`
+environment and the `id-token: write` grant travel with the called
+job), registry proven by `npm view` before any "published" claim. One
+version covers both configs channels — the npm pin and every
+`uses: OlivierZal/configs/...@<sha> # vX.Y.Z` ref, the two release
+stubs included — and `check-pins.sh` fails a mismatch. Version by the
+CONTRACT, not by observed consumers: a signature change is a major even
+when every known caller already complies.
 
 Dependabot's commit prefixes are pinned to `build(deps)` /
 `build(deps-dev)` — including the `github-actions` entry, which said
