@@ -1,13 +1,13 @@
 /**
  * Structural logger seam: an app, device or driver instance passes
  * itself — anything with an `error` method fits, so no per-site error
- * adapter is ever needed.
+ * adapter is ever needed. Shared by {@link fireAndForget} and
+ * `settleAll`.
  * @category Utilities
  */
 export interface Logger {
   /**
-   * Receives the fire-and-forget context message followed by the
-   * rejection reason.
+   * Receives the context message followed by the rejection reason.
    */
   readonly error: (...args: readonly unknown[]) => void
 }

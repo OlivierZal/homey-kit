@@ -320,9 +320,20 @@ export const createSelect = (
  * string as a boolean, and anything else as a number when finite, else
  * the raw string. An empty value reads as `null` — "no instruction",
  * never an empty-string write.
+ *
+ * The numeric read is by VALUE, not by control: a `<select>` whose option
+ * ids are numeric strings reads as numbers too (a temperature grid built
+ * as a select relies on it), so a page whose dropdown ids are words on
+ * the wire keeps them words — a numeric-looking id would be written as a
+ * number the driver never declared and read as divergent from its stored
+ * value forever. Pin the manifest in a test rather than the reader.
  * @param element - The control to read.
- * @param parseNumber - The bounded-number strategy; omitted by pages
- * without bounded numeric inputs, whose values take the plain read.
+ * @param parseNumber - The bounded-number strategy, consulted only for a
+ * `type="number"` input carrying both bounds. Passed by no consumer in
+ * the family (measured 2026-09-07; the one page with bounded number
+ * inputs applies its throwing strategy to the input directly): it stays
+ * through 5.x by the contract and goes in the next major — a page that
+ * needs a bounds strategy re-enters it with that page.
  * @returns The value, typed by what the control carries.
  * @category DOM
  */
