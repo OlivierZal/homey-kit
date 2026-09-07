@@ -5,9 +5,12 @@ workflow expected before opening a pull request.
 
 ## Prerequisites
 
-- Node.js matching `engines.node` in [`package.json`](package.json) —
-  currently `>=22.20.0`, the floor **measured on the device fleet**
-  rather than a round number
+- Node.js as [`.nvmrc`](.nvmrc) names it — 22.22.2, the install floor
+  of the tooling tree (derived in `@olivierzal/configs`, re-derived
+  there when the tree moves). `engines.node` in
+  [`package.json`](package.json) states a different, lower number on
+  purpose: `>=22.20.0`, the floor **measured on the device fleet** that
+  the published output runs under
 - npm 10+
 - A GitHub personal access token with the `read:packages` scope, exported
   as `NODE_AUTH_TOKEN` — [`.npmrc`](.npmrc) reads that variable to fetch
@@ -93,7 +96,8 @@ must do to adopt it. Keeping a second, file-based history would mean
 maintaining the same content twice and letting the two drift.
 
 Releases are cut by the maintainer through GitHub Releases; `publish.yml`
-then publishes to GitHub Packages. Versions follow
-[SemVer](https://semver.org), counted against what a consumer sees:
-raising what the published output requires at runtime is breaking even
-when no exported type moves.
+— a stub over the family's `reusable-publish.yml` — then publishes to
+GitHub Packages, and `docs.yml` deploys the site the same way. Versions
+follow [SemVer](https://semver.org), counted against what a consumer
+sees: raising what the published output requires at runtime is breaking
+even when no exported type moves.
