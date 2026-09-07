@@ -325,6 +325,15 @@ stubs included — and `check-pins.sh` fails a mismatch. Version by the
 CONTRACT, not by observed consumers: a signature change is a major even
 when every known caller already complies.
 
+Auto-merge is never armed on an authored PR (verdict 2026-09-07:
+api-core #12 had it armed and merged 13 s before Copilot's review
+landed, leaving two threads on a merged PR, one of them real). A PR
+merges by hand, on its FINAL head, once three things hold at once:
+every check SUCCESS or SKIPPED, the Sonar PR window at zero open
+issues with the gate OK, and every review thread settled. The
+Dependabot lane (`dependabot.yml` arming `gh pr merge --auto` once CI
+passes) is the one deliberate exception and stays as documented.
+
 Dependabot's commit prefixes are pinned to `build(deps)` /
 `build(deps-dev)` — including the `github-actions` entry, which said
 `ci` until 2026-08 purely because this repo was created without the
