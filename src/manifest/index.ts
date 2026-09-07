@@ -120,9 +120,12 @@ export interface ManifestDriver {
    */
   readonly id: string
   /**
-  The driver's localized display name.
+  The driver's display name: localized strings, or the plain string the
+  manifest admits just as well (com.heatzy ships the plain form) — a
+  localized value is served in the caller's language, a plain string as
+  is.
    */
-  readonly name: LocalizedStrings
+  readonly name: string | LocalizedStrings
   /**
   The pairing steps, one of which may be the login form.
    */
