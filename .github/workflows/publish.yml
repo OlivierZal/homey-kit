@@ -1,8 +1,9 @@
 # Calls the family's reusable publish pipeline (pack, attest the
 # tarball's provenance, publish it to GitHub Packages). The `npm`
-# environment and the `id-token: write` the attestation needs travel
-# with the called job; this stub grants them and keeps the release
-# trigger.
+# environment is set on the called job, in configs; this stub grants
+# the permissions that job claims (`id-token: write` and
+# `attestations: write` for the attestation, `packages: write` for the
+# publish, `contents: read`) and keeps the release trigger.
 jobs:
   publish:
     permissions:

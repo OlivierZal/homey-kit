@@ -1,10 +1,11 @@
 # Calls the family's reusable docs pipeline (build the typedoc site,
-# deploy it to GitHub Pages). The `github-pages` environment and the
-# `id-token: write` the deployment needs travel with the called job;
-# this stub grants them and keeps the release trigger. `dry-run`
-# rehearses the build half without deploying — dispatch it by hand
-# after every re-pin of this path, before the next release reaches the
-# deploy half.
+# deploy it to GitHub Pages). The `github-pages` environment is set on
+# the called deploy job, in configs; this stub grants the permissions
+# the called jobs claim (`id-token: write` and `pages: write` for the
+# deployment, `contents` and `packages` read for the build) and keeps
+# the release trigger. `dry-run` rehearses the build half without
+# deploying — dispatch it by hand after every re-pin of this path,
+# before the next release reaches the deploy half.
 jobs:
   docs:
     permissions:
