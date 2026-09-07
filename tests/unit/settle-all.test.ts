@@ -1,3 +1,5 @@
+import { setImmediate as nextTick } from 'node:timers/promises'
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { settleAll } from '../../src/settle-all.ts'
@@ -7,15 +9,29 @@ describe(settleAll, () => {
     const logger = { error: vi.fn<(...args: readonly unknown[]) => void>() }
     const first = new Error('first down')
     const second = new Error('second down')
-    const survivor = vi.fn<() => Promise<void>>().mockResolvedValue()
+    const survivor = Promise.withResolvers<boolean>()
+    const onSettled = vi.fn<() => void>()
+    const settle = async (): Promise<void> => {
+      await settleAll(
+        [Promise.reject(first), survivor.promise, Promise.reject(second)],
+        logger,
+        'Work failed:',
+      )
+      onSettled()
+    }
 
-    await settleAll(
-      [Promise.reject(first), survivor(), Promise.reject(second)],
-      logger,
-      'Work failed:',
-    )
+    const settled = settle()
+    await nextTick()
 
-    expect(survivor).toHaveBeenCalledTimes(1)
+    // Both rejections are already seen; the call must still hold for the
+    // pending branch — returning once every rejection is reported would
+    // be a partial settle the apps never had.
+    expect(onSettled).not.toHaveBeenCalled()
+
+    survivor.resolve(true)
+    await settled
+
+    expect(onSettled).toHaveBeenCalledTimes(1)
     expect(logger.error).toHaveBeenCalledTimes(2)
     expect(logger.error).toHaveBeenNthCalledWith(1, 'Work failed:', first)
     expect(logger.error).toHaveBeenNthCalledWith(2, 'Work failed:', second)

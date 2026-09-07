@@ -252,7 +252,7 @@ fenced FIRST for that reason.
   wire keeps them words: a numeric-looking id would be written as a
   number the driver never declared and read as divergent from its
   stored value forever. Neither app is hit (com.heatzy's ids are
-  `cft`/`eco`/`previous`, pinned by its
+  `cft`/`eco`/`previous`, which its 5.2.0 adoption pins in
   `tests/unit/device-settings-contract.test.ts`; com.melcloud's composed
   manifest carries no numeric dropdown id, counted 2026-09-07). The
   constraint lives on the consumer's manifest; the kit states it beside
