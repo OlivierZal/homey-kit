@@ -31,17 +31,17 @@ range.
 
 ## Subpaths
 
-| Import                           | Contents                                                                                                                                                                                                                                           |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@olivierzal/homey-kit`          | `fireAndForget` (+ `Logger`), `getErrorMessage`, `NotFoundError`, `selectChangelogEntries`, `sequential`                                                                                                                                           |
-| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …), the Homey form-control builders (`createInput`, `createSelect`, …) and the form-value reader (`parseFormValue`)                                                                              |
-| `@olivierzal/homey-kit/webview`  | The boot cycle (`runWebview`, `withInitTimeout`, `surfaceError`, `fireAndForget`, `trySetDocumentLanguage`), `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity`         |
-| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm` — and `watchSettingsFreshness`, the settings page's whole freshness handshake in one call                                                   |
-| `@olivierzal/homey-kit/widget`   | The promise-native widget SDK typed: `homeyApiGet`/`Post`/`Put`                                                                                                                                                                                    |
-| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                           |
-| `@olivierzal/homey-kit/node`     | The two node-side halves of the freshness handshake: `stampPackagedPages` (+ `stampHtml`, `stampReferences`), the package-time `?v=` stamper that emits `webview-hashes.json`, and `getWebviewHashes`, the runtime reader the route serves         |
-| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                                                                                                                                        |
-| `@olivierzal/homey-kit/testing`  | The analysis seams (`findContractBreach`, `analyzeRouteGuards`, `analyzeWebviewFloor` + `getQuotedEntries`) and the plain helpers every suite shares (`assertDefined`, `getMockCallArg`, `mock`, `settleDetached`, `InteropModule`) — needs vitest |
+| Import                           | Contents                                                                                                                                                                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@olivierzal/homey-kit`          | `fireAndForget` and `settleAll` (+ `Logger`), `sequential`, `getErrorMessage`, `NotFoundError`, `logSettingsRoute` (+ `BreadcrumbLogger`), `createSettingManager` (+ `SettingStore`, `SettingManager`), `announceChangelog` (+ `NOTIFICATION_DELAY_MS`) over `selectChangelogEntries` |
+| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …), the Homey form-control builders (`createInput`, `createSelect`, …) and the form-value reader (`parseFormValue`)                                                                                                                 |
+| `@olivierzal/homey-kit/webview`  | The boot cycle (`runWebview`, `withInitTimeout`, `surfaceError`, `fireAndForget`, `trySetDocumentLanguage`), `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity`                                            |
+| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyApiGet`/`Post`/`Put`/`Delete`, `homeyConfirm` — and `watchSettingsFreshness`, the settings page's whole freshness handshake in one call                                                                                      |
+| `@olivierzal/homey-kit/widget`   | The promise-native widget SDK typed: `homeyApiGet`/`Post`/`Put` — and `watchWidgetFreshness`, the widget's whole freshness handshake in one call                                                                                                                                      |
+| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                                                              |
+| `@olivierzal/homey-kit/node`     | The two node-side halves of the freshness handshake: `stampPackagedPages` (+ `stampHtml`, `stampReferences`), the package-time `?v=` stamper that emits `webview-hashes.json`, and `getWebviewHashes`, the runtime reader the route serves                                            |
+| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                                                                                                                                                                           |
+| `@olivierzal/homey-kit/testing`  | The analysis seams (`findContractBreach`, `analyzeRouteGuards`, `analyzeWebviewFloor` + `getQuotedEntries`) and the plain helpers every suite shares (`assertDefined`, `getMockCallArg`, `mock`, `settleDetached`, `InteropModule`) — needs vitest                                    |
 
 ## The DOM subpath
 
@@ -200,6 +200,36 @@ keys it forwards are real. A global escape hatch would spend that one
 narrowing across every call site in the app, and a typo would read
 `undefined` at runtime instead of failing to compile.
 
+The adapter itself is the kit's: `createSettingManager` turns the typed
+`homey.settings` into the plain-string `SettingManager` an API library
+persists its session through, coercing a non-string read to "absent"
+the way the library expects. The mapper is the app's — a prefix, or the
+bare narrowing above — and there is no identity default, because a
+store keyed by `string` would be exactly the escape hatch the
+augmentation refuses:
+
+```ts title="app"
+import { createSettingManager } from '@olivierzal/homey-kit'
+
+const settingManager = createSettingManager(this.homey.settings, settingKey)
+```
+
+## The app-side seams
+
+Three helpers take the app instance itself, structurally — anything
+with the one method each needs fits:
+
+- `fireAndForget(promise, logger, message)` detaches already-started
+  work and logs its rejection instead of propagating it.
+- `settleAll(promises, logger, message)` settles independent branches
+  together and logs each rejection on its own, where `Promise.all` would
+  abandon the rest at the first failure and hide every reason but one.
+  Both take a `Logger` (an `error` method).
+- `logSettingsRoute(logger, route)` leaves the settings page's
+  breadcrumb — `{ dataType: 'Settings page', route }` — in the app log,
+  where the page is otherwise invisible in a diagnostic report. It takes
+  a `BreadcrumbLogger` (a `log` method); label the route `METHOD /path`.
+
 ## Wiring the test kernels
 
 Each app keeps its tables **and its own `describe`/`it` blocks** — a
@@ -307,42 +337,24 @@ if (await watchSettingsFreshness(homey)) {
 }
 ```
 
-A widget wires the primitive underneath, `watchWebviewFreshness`, with
-its own transport (the promise-native widget SDK) and its own entry
-key; the `report` argument is the diagnostics channel: point it at the
-app's boot-error route so a refetch that is skipped or that fails to
-heal leaves a trace instead of a silently stale page.
+A widget wires the same handshake under its own entry key, over the
+promise-native widget transport — `watchWidgetFreshness` is the widget
+twin of `watchSettingsFreshness`, the same three routes and the same
+breadcrumb, and the widget SDK instance fits its host type as-is:
 
 ```ts title="widgets/charts/public/index"
-import {
-  fireAndForget,
-  watchWebviewFreshness,
-} from '@olivierzal/homey-kit/webview'
-import { homeyApiGet, homeyApiPost } from '@olivierzal/homey-kit/widget'
+import { watchWidgetFreshness } from '@olivierzal/homey-kit/widget'
 
-if (
-  await watchWebviewFreshness({
-    entry: 'charts',
-    fetchHashes: async () => homeyApiGet(homey, '/webview-hashes'),
-    report: (message) => {
-      fireAndForget(
-        homeyApiPost(homey, '/boot-error', {
-          message,
-          name: 'WebviewFreshness',
-        }),
-        () => {
-          // A missed freshness breadcrumb is acceptable.
-        },
-      )
-    },
-    subscribe: (onPoke) => {
-      homey.on('webview_hashes_changed', onPoke)
-    },
-  })
-) {
+if (await watchWidgetFreshness(homey, 'charts')) {
   return
 }
 ```
+
+A page that owns other routes wires the primitive underneath,
+`watchWebviewFreshness`, with its own transport and entry key; its
+`report` argument is the diagnostics channel: point it at the app's
+boot-error route so a refetch that is skipped or that fails to heal
+leaves a trace instead of a silently stale page.
 
 The guarantee lives in the boot check; the foreground trigger carries
 it to the one surface where no boot happens — a mobile webview
@@ -368,8 +380,35 @@ about the bundle behind it.
 
 An app notifies the changelog on boot and stores the version it
 announced. Selecting only the running version means a user who updates
-rarely never hears about the releases in between, so
-`selectChangelogEntries` walks the stored version up to the running one:
+rarely never hears about the releases in between, so the announcement
+walks the stored version up to the running one. `announceChangelog` is
+the whole wiring in one call: it reads `notifiedVersion`, selects,
+posts each excerpt in order after a ten-second delay (the restart's own
+churn has settled by then), and records the running version once every
+excerpt posted — a failed post leaves it unrecorded, so the next boot
+tries again. Pass the Homey instance as the scheduler: its `setTimeout`
+is `this`-bound and disposed at uninit, which a bare reference would
+lose.
+
+```ts title="app"
+import { announceChangelog } from '@olivierzal/homey-kit'
+
+announceChangelog({
+  changelog,
+  homey: this.homey,
+  language: this.homey.i18n.getLanguage(),
+  notifications: this.homey.notifications,
+  settings: this.homey.settings,
+  version: this.homey.manifest.version,
+})
+```
+
+The host halves are structural, so the app's typed `homey.settings`
+fits without widening its keys. A suite advancing fake timers imports
+`NOTIFICATION_DELAY_MS` rather than restating the figure.
+
+`selectChangelogEntries` stays public underneath, for an app that owns
+the delivery:
 
 ```ts title="app"
 const { entries, omitted } = selectChangelogEntries({
@@ -387,7 +426,3 @@ when the user's language is missing, and a version translated into
 neither drops out of the series instead of ending it. Beyond five
 versions only the most recent are returned, the rest counted in
 `omitted` so the caller can say so rather than drop them silently.
-
-Emission stays in the app: `createNotification` and the
-`notifiedVersion` write are SDK-coupled, and only the selection is
-shared.

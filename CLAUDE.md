@@ -74,12 +74,20 @@ in their app; no native-Homey behavior overrides.
 
 **Layered exports are deliberate, not ghosts**: `ensureFreshWebview`
 under `watchWebviewFreshness`, itself under `watchSettingsFreshness`
-(the settings page's fixed routes), `withInitTimeout` under
+(the settings page's fixed routes) and `watchWidgetFreshness` (the same
+routes over the widget transport), `withInitTimeout` under
 `runWebview`, `getPageIdentity` beside both, `configureNumericInput`
 under `createInput`, `stampHtml`/`stampReferences` under
-`stampPackagedPages`. The orchestrator is the documented path; the
+`stampPackagedPages`, `selectChangelogEntries` under
+`announceChangelog`. The orchestrator is the documented path; the
 primitive stays public for a consumer that owns the orchestration. Do
 not remove a primitive because only the orchestrator calls it today.
+
+The 5.2.0 root helpers entered on the first bar — `announceChangelog`
+and `logSettingsRoute` were verbatim in three apps, `createSettingManager`
+and `settleAll` in two — and `watchWidgetFreshness` on the second (one
+consumer; the shape is the SDK transport's, and it is line for line the
+settings orchestrator with the other transport).
 
 ## No dependencies, and no peers either
 
@@ -202,6 +210,27 @@ fenced FIRST for that reason.
 - `NotFoundError`: the extension keeps a LOCAL variant that forces
   `super('notFound')` because its settings UI matches on that message —
   never "deduplicate" it blindly.
+- `createSettingManager` has NO identity default for its mapper: a
+  `string`-keyed store would be the escape hatch `TypedManagerSettings`
+  refuses, and no consumer reaches such a default — each app keeps its
+  `prefixKey`/`settingKey` narrowing, with its boundary comment, beside
+  its own settings type. A default nothing reaches is the kind of branch
+  the 100 % bar rejects (see `parseFormValue` below).
+- `announceChangelog` takes the Homey instance as its scheduler (its
+  `setTimeout` is `this`-bound and disposed at uninit — never hand it a
+  bare `setTimeout`), owns the `notifiedVersion` key and the ten-second
+  delay, and swallows a failed post so the version stays unrecorded for
+  the next boot. The host halves are structural: the apps' augmented
+  `homey.settings` fits without a `(key: string)` widening
+  (`tests/types/structural-hosts.ts` pins that, together with the real
+  `Homey`/`HomeyWidget` types against the scheduler and the widget host).
+- `parseFormValue` KEEPS its `parseNumber` strategy parameter — the
+  2026-09 verdict on the "reached by no consumer" finding: rather than
+  the kit dropping the branch (a `./dom` signature change, a major), the
+  second reader in the family adopts it — com.heatzy imports
+  `parseFormValue` with its bounded-number strategy and deletes its
+  local `processValue`. The branch gains a consumer; the signature does
+  not move.
 
 ## Governance files
 
