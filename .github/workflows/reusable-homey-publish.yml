@@ -61,7 +61,10 @@ jobs:
             echo "::error::Missing packaged page: .homeybuild/$STAMPED_PAGE"
             exit 1
           fi
-          if ! grep -q 'index\.js?v=' ".homeybuild/$STAMPED_PAGE"; then
+          # The stamper rewrites every local script/style reference of the
+          # page with `?v=<8-hex>`; one such reference proves the page
+          # went through it, whatever the bundle is called.
+          if ! grep -qE '\?v=[0-9a-f]{8}"' ".homeybuild/$STAMPED_PAGE"; then
             echo "::error::Packaged page is unstamped: .homeybuild/$STAMPED_PAGE"
             exit 1
           fi
