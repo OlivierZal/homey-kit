@@ -417,3 +417,30 @@ when the user's language is missing, and a version translated into
 neither drops out of the series instead of ending it. Beyond five
 versions only the most recent are returned, the rest counted in
 `omitted` so the caller can say so rather than drop them silently.
+
+## Workflows
+
+Since 6.1.0 this package also ships the Homey apps' process, as
+reusable workflows the three apps call by SHA with the release tag as
+the version comment — the same tag as the npm pin, one version for both
+channels, which configs' `check-pins.sh` polices exactly as it does for
+`@olivierzal/configs`:
+
+- `reusable-homey-validate.yml` — the family's install action, then
+  Athom's validator at publish level; runs on every app pull request.
+- `reusable-homey-publish.yml` — the store release from the `homey`
+  environment, then the assertion that the packaged bundles the CLI's
+  post-copy build must emit are there; takes `bundles` (one path per
+  line) and `stamped-page`, and the `HOMEY_PAT` secret.
+- `ios-floor-watch.yml` — re-reads, monthly and on dispatch, the Homey
+  mobile app's App Store iOS minimum the webview floor is derived from,
+  and opens an issue here on any move.
+
+```yaml title=".github/workflows/validate.yml"
+jobs:
+  validate:
+    permissions:
+      contents: read
+      packages: read
+    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-validate.yml@<sha> # v6.1.0
+```

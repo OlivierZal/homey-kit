@@ -173,6 +173,27 @@ go-to-definition land on real source.
   re-derive it by hand: the hand copy this repo once carried had
   drifted in BOTH directions (missed `matchAll`, false-positived
   `Object.entries().map()`).
+- **The Homey process workflows live HERE (6.1.0)**:
+  `reusable-homey-validate.yml`, `reusable-homey-publish.yml` and
+  `ios-floor-watch.yml`, moved from configs before its 6.0.0 release on
+  the cohesion argument — the floor watch guards the App Store minimum
+  the doctrine above derives from, so its issue lands where the doctrine
+  is; and a change to the apps' process now costs the three apps an
+  adoption, not the seven consumers a configs release forces. What
+  stays in configs is lint policy (`webviewFloorBlock`, the `homey-app`
+  preset), by nature. Consequence: this package is a TWO-CHANNEL package
+  from 6.1.0 — an app pins the workflows by SHA with the release tag as
+  the version comment, and that tag must equal the npm pin; configs'
+  `check-pins.sh` (6.0.0) polices the pair for `OlivierZal/homey-kit`
+  as it does for configs, so every kit release the apps adopt moves the
+  `uses:` refs in the same commit as the npm pin. Validate proves itself
+  on every app pull request (its required check reads
+  `validate / Validate app`); publish is release-only and proven by each
+  app's next store release; the watch opens ONE issue here on any move
+  of the recorded 16.4 (below 17 the derivation only needs restating, at
+  17 the `v` ban stops being derivable, at 17.4 the whole es2023 floor
+  does), and fails the run on an empty or unreadable answer. The shapes
+  are pinned in `tests/unit/homey-workflows.test.ts`.
 - **Device node runtime — measured, no API floor**: the fleet
   measurement (2026-08) put every up-to-date device at Node 22.20
   (Pro Early 2019) or 22.23 (Pro 2023), which is what `engines.node`
