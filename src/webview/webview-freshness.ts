@@ -250,15 +250,16 @@ export const ensureFreshWebview = async (
  */
 export interface WatchWebviewFreshnessOptions {
   /**
-  The page's key in the served hash manifest.
+   * The page's key in the served hash manifest.
    */
   readonly entry: string
   /**
-  Optional diagnostics sink receiving each refetch decision, deduplicated.
+   * Optional diagnostics sink receiving each refetch decision,
+   * deduplicated.
    */
   readonly report?: ((message: string) => void) | undefined
   /**
-  Bridge call returning the live hashes; the transport is the caller's.
+   * Bridge call returning the live hashes; the transport is the caller's.
    */
   readonly fetchHashes: () => Promise<Partial<Record<string, string>>>
 }
