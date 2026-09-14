@@ -147,9 +147,9 @@ const refetchDocument = (
   report?: (message: string) => void,
 ): boolean => {
   try {
-    const url = new URL(location.href)
+    const url = new URL(globalThis.location.href)
     url.searchParams.set('fresh', identity)
-    location.replace(url.href)
+    globalThis.location.replace(url.href)
     return true
   } catch {
     reportSafely(
