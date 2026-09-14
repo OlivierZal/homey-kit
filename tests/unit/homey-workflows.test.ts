@@ -77,12 +77,14 @@ describe('reusable-homey-publish.yml', () => {
     const stampedPage = asRecord(inputs['stamped-page'], 'stamped-page')
     const secrets = asRecord(call.secrets, 'secrets')
 
-    expect(Object.keys(inputs)).toStrictEqual(['bundles', 'stamped-page'])
+    expect(new Set(Object.keys(inputs))).toStrictEqual(
+      new Set(['bundles', 'stamped-page']),
+    )
     expect(bundles.required).toBe(true)
     expect(bundles.type).toBe('string')
     expect(stampedPage.default).toBe('settings/index.html')
     expect(stampedPage.required).toBe(false)
-    expect(Object.keys(secrets)).toStrictEqual(['HOMEY_PAT'])
+    expect(new Set(Object.keys(secrets))).toStrictEqual(new Set(['HOMEY_PAT']))
     expect(asRecord(secrets.HOMEY_PAT, 'HOMEY_PAT').required).toBe(true)
   })
 

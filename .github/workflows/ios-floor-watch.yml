@@ -68,12 +68,14 @@ jobs:
           fi
           title="iOS floor watch: App Store minimum moved to ${minimum} — ${verdict}"
 
-          # One open report per move; a second run adds nothing a reader
-          # does not already have.
+          # One open report per VALUE: a second run at the same minimum
+          # adds nothing a reader does not already have, while a further
+          # move before the first issue is closed is news and gets its
+          # own.
           existing=$(gh api "repos/${REPO}/issues?state=open" \
-            --jq '[.[] | select(.title | startswith("iOS floor watch:"))] | length')
+            --jq --arg title "$title" '[.[] | select(.title == $title)] | length')
           if ((existing > 0)); then
-            printf 'an iOS floor watch issue is already open; not duplicating\n'
+            printf 'the iOS floor watch issue for %s is already open; not duplicating\n' "$minimum"
             exit 0
           fi
 
