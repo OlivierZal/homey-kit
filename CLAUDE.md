@@ -61,9 +61,12 @@ Run the FULL suite before any push; check real exit codes:
   the family's `reusable-docs.yml` — `docs.yml` is a stub over it since
   the configs 5.0.0 adoption, granting what the called jobs claim
   (contents and packages read, pages and id-token write) and nothing
-  more, and the called jobs run THIS repo's
-  `.github/actions/setup-node-and-install`, so the composite action
-  stays. The stub's `workflow_dispatch` takes `dry-run: true`, which
+  more. The composite action `.github/actions/setup-node-and-install`
+  stays in THIS repo because its own two Homey reusables reach it
+  through `$/` (GitHub's self-repository syntax, since 6.2.0: resolved
+  in the repository that defines the workflow, at the running commit —
+  the three apps carry no copy once they adopt); configs' reusables
+  reach configs' copy the same way since configs 6.1.0. The stub's `workflow_dispatch` takes `dry-run: true`, which
   builds and packs the site without deploying: dispatch it once after
   every re-pin of the release path and watch the build half succeed
   before a release reaches the deploy half (environment `github-pages`
