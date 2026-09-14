@@ -5,9 +5,9 @@ import type { WidgetApi } from '../../src/widget/promise-api.ts'
 import { getMockCallArg, settleDetached } from '../../src/testing/helpers.ts'
 import { watchWidgetFreshness } from '../../src/widget/watch-widget-freshness.ts'
 
-// The orchestrator under test owns the WIRING: the entry key, the two
-// routes over the promise-native transport. The
-// handshake's own behavior (guards, fences, triggers) is pinned in
+// The orchestrator under test owns the WIRING: the entry key and the
+// two routes over the promise-native transport. The handshake's own
+// behavior (guards, fences, triggers) is pinned in
 // `webview-freshness.test.ts`.
 
 const ENTRY = 'ata-group-setting'
