@@ -126,3 +126,23 @@ describe('ios-floor-watch.yml', () => {
     expect(watch.permissions).toStrictEqual({ issues: 'write' })
   })
 })
+
+describe('the install step of the Homey reusables', () => {
+  // `$/` resolves in THIS repository at the running commit; `./` would
+  // resolve in the caller's checkout, which is what made every app carry
+  // a copy of the composite action before 6.2.0.
+  it.each([
+    ['reusable-homey-validate.yml', 'validate'],
+    ['reusable-homey-publish.yml', 'publish'],
+  ])(
+    '%s should reach the composite action through the self-repository reference',
+    (file, id) => {
+      const install = stepsOf(file, id).find(
+        ({ uses }) =>
+          typeof uses === 'string' && uses.endsWith('setup-node-and-install'),
+      )
+
+      expect(install?.uses).toBe('$/.github/actions/setup-node-and-install')
+    },
+  )
+})
