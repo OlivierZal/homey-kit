@@ -328,30 +328,15 @@ export const createSelect = (
  * number the driver never declared and read as divergent from its stored
  * value forever. Pin the manifest in a test rather than the reader.
  * @param element - The control to read.
- * @param parseNumber - The bounded-number strategy, consulted only for a
- * `type="number"` input carrying both bounds. Passed by no consumer in
- * the family (measured 2026-09-07; the one page with bounded number
- * inputs applies its throwing strategy to the input directly): it stays
- * through 5.x by the contract and goes in the next major — a page that
- * needs a bounds strategy re-enters it with that page.
  * @returns The value, typed by what the control carries.
  * @category DOM
  */
 export const parseFormValue = (
   element: HTMLValueElement,
-  parseNumber?: (input: HTMLInputElement) => number,
 ): boolean | number | string | null => {
   if (element.value !== '') {
     if (element.type === 'checkbox') {
       return element.indeterminate ? null : element.checked
-    }
-    if (
-      parseNumber !== undefined &&
-      element.type === 'number' &&
-      element.min !== '' &&
-      element.max !== ''
-    ) {
-      return parseNumber(element)
     }
     if (booleanStrings.includes(element.value)) {
       return element.value === 'true'

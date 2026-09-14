@@ -344,10 +344,7 @@ const settled = async (): Promise<void> =>
 
 const options = (
   fetchHashes: () => Promise<Partial<Record<string, string>>>,
-  extra: {
-    report?: (message: string) => void
-    subscribe?: (onPoke: () => void) => void
-  } = {},
+  extra: { report?: (message: string) => void } = {},
 ): Parameters<typeof watchWebviewFreshness>[0] => ({
   entry: 'ata-group-setting',
   fetchHashes,
@@ -420,23 +417,6 @@ describe(watchWebviewFreshness, () => {
     expect(replace).toHaveBeenCalledTimes(1)
   })
 
-  it('should re-check through the app poke when a channel is given', async () => {
-    const { replace } = install({ references: FRESH_PAGE })
-    let poke: (() => void) | undefined
-
-    await watchWebviewFreshness(
-      options(moving(), {
-        subscribe: (onPoke): void => {
-          poke = onPoke
-        },
-      }),
-    )
-    poke?.()
-    await settled()
-
-    expect(replace).toHaveBeenCalledTimes(1)
-  })
-
   it('should collapse a breadcrumb repeated by every return', async () => {
     const report = vi.fn<(message: string) => void>()
     const { resume } = install({
@@ -501,24 +481,6 @@ describe(watchWebviewFreshness, () => {
 
     expect(replace).not.toHaveBeenCalled()
     expect(report).not.toHaveBeenCalled()
-  })
-
-  it('should boot the page when the poke channel throws', async () => {
-    // Met in the wild by an adopting app: a transport double without
-    // `on` made the subscription throw, which used to reject the boot.
-    const { replace } = install({ references: STALE_PAGE })
-
-    await expect(
-      watchWebviewFreshness(
-        options(serving(HASHES), {
-          subscribe: (): never => {
-            throw new Error('no channel')
-          },
-        }),
-      ),
-    ).resolves.toBe(true)
-
-    expect(replace).toHaveBeenCalledTimes(1)
   })
 
   it('should heal the page even when its diagnostics throw', async () => {

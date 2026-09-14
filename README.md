@@ -41,7 +41,7 @@ range.
 | `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                                                              |
 | `@olivierzal/homey-kit/node`     | The two node-side halves of the freshness handshake: `stampPackagedPages` (+ `stampHtml`, `stampReferences`), the package-time `?v=` stamper that emits `webview-hashes.json`, and `getWebviewHashes`, the runtime reader the route serves                                            |
 | `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                                                                                                                                                                           |
-| `@olivierzal/homey-kit/testing`  | The analysis seams (`findContractBreach`, `analyzeRouteGuards`, `analyzeWebviewFloor` + `getQuotedEntries`) and the plain helpers every suite shares (`assertDefined`, `getMockCallArg`, `mock`, `settleDetached`, `InteropModule`) — needs vitest                                    |
+| `@olivierzal/homey-kit/testing`  | The analysis seams (`findContractBreach`, `analyzeRouteGuards`) and the plain helpers every suite shares (`assertDefined`, `getMockCallArg`, `mock`, `settleDetached`, `InteropModule`) — needs vitest                                                                                |
 
 ## The DOM subpath
 
@@ -71,9 +71,9 @@ getFieldset('login').append(createLabel(input, title, 'homey-form-label'))
 is a number whether it comes from a number input or a select (a
 temperature grid built as a select reads as numbers), so a page whose
 dropdown ids are words on the wire keeps them words — pin the manifest in
-a test rather than the reader. Its optional `parseNumber` strategy (a
-`type="number"` input carrying both bounds) is passed by no app and goes
-in the next major; the verdict is in CLAUDE.md.
+a test rather than the reader. A bounded number input reads the same
+way — its bounds are the page's business (the strategy parameter that
+once served them went in 6.0.0, passed by no app).
 
 Anything tied to one app's domain stays in that app — zone pickers, log
 rows, comboboxes.
@@ -269,30 +269,13 @@ The compile-time half of the contract stays app-side too: asserting
 `expectTypeOf<Handler>().toBeFunction()` over the surface's handler
 union typechecks only when every handler is callable.
 
-The webview-floor closure follows the same split: the app reads its own
-perimeter out of its own config files (`getQuotedEntries` extracts the
-quoted entries of the list a key introduces — `const entryPoints = [...]`
-in the bundler script, `webviewFloorFiles: [...]` in the lint config),
-the kernel walks the value-import closure from the bundler's entry
-points and holds it against the floor globs, and the app asserts over
-the findings:
-
-```ts title="tests/unit/webview-floor.test"
-import {
-  analyzeWebviewFloor,
-  getQuotedEntries,
-} from '@olivierzal/homey-kit/testing'
-
-const findings = analyzeWebviewFloor({
-  entryPoints: getQuotedEntries(bundleSource, 'entryPoints'),
-  floorGlobs: getQuotedEntries(eslintSource, 'webviewFloorFiles'),
-  repoRoot: REPO_ROOT,
-})
-
-it('floors every file a webview bundle can emit', () => {
-  expect(findings.uncovered).toStrictEqual([])
-})
-```
+The webview-floor closure is NOT a kit kernel any more: since 6.0.0
+each app asks its bundler — esbuild's metafile over the real entry
+points, `node_modules` excluded — which files its webview bundles emit,
+and holds every input against the floor globs it declares once in
+`scripts/webview-perimeter.mts` (shared by the bundler, the lint and
+the suite). The bundler's own answer replaced the text walk the kit
+used to ship.
 
 The plain helpers (`assertDefined`, `getMockCallArg`, `mock`,
 `settleDetached`, the `InteropModule` shape) come from the same subpath,
@@ -334,9 +317,9 @@ export const readWebviewHashes = async (): Promise<
 ```
 
 A settings page wires the whole handshake in one call: the `settings`
-entry, the `GET /webview-hashes` route, the `POST /boot-error`
-breadcrumb channel and the app's `webview_hashes_changed` poke are the
-same in every app, so `watchSettingsFreshness` carries them.
+entry, the `GET /webview-hashes` route and the `POST /boot-error`
+breadcrumb channel are the same in every app, so
+`watchSettingsFreshness` carries them.
 
 ```ts title="settings/index"
 if (await watchSettingsFreshness(homey)) {
@@ -366,14 +349,14 @@ leaves a trace instead of a silently stale page.
 
 The guarantee lives in the boot check; the foreground trigger carries
 it to the one surface where no boot happens — a mobile webview
-surviving an app restart. Why the `subscribe` poke cannot carry it
-(measured on-device) and why the two must never be folded together is
-maintainer doctrine, in `CLAUDE.md`.
+surviving an app restart. Why the app's `webview_hashes_changed` poke
+could not carry it (measured on-device, removed in 6.0.0) is maintainer
+doctrine, in `CLAUDE.md`.
 
 Everything the caller hands over is fenced: a `report` that throws, a
-`subscribe` that throws, a rejecting `fetchHashes`, an unregistrable
-listener or a detached document all degrade the self-heal and never
-stop the page from booting.
+rejecting `fetchHashes`, an unregistrable listener or a detached
+document all degrade the self-heal and never stop the page from
+booting.
 
 `ensureFreshWebview` stays exported as the single-check primitive under
 `watchWebviewFreshness`, for a page that owns its own triggers.

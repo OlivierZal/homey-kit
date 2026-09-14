@@ -11,7 +11,7 @@ import type HomeyWidget from 'homey/lib/HomeyWidget.js'
 import type { ChangelogAnnouncementOptions } from '../../src/announce-changelog.ts'
 import type { SettingStore } from '../../src/setting-manager.ts'
 import type { TypedManagerSettings } from '../../src/types/homey.ts'
-import type { WidgetFreshnessHost } from '../../src/widget/watch-widget-freshness.ts'
+import type { WidgetApi } from '../../src/widget/promise-api.ts'
 
 interface TestSettings {
   readonly homeUsername?: string | null
@@ -19,12 +19,9 @@ interface TestSettings {
   readonly username?: string | null
 }
 
-// The widget SDK instance is the freshness host as-is: its `api`
-// narrows the method to four literals (bivariant method signature) and
-// its `on` takes a `Function`.
-export const canWidgetHost: HomeyWidget extends WidgetFreshnessHost
-  ? true
-  : false = true
+// The widget SDK instance is the transport as-is: its `api` narrows
+// the method to four literals (bivariant method signature).
+export const canWidgetHost: HomeyWidget extends WidgetApi ? true : false = true
 
 // The Homey instance is the scheduler as-is — its `this`-bound,
 // uninit-tracked `setTimeout` takes a `Function`.
