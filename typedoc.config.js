@@ -7,6 +7,7 @@ const config = typedocBase({
     'Webview',
     'DOM',
     'Settings',
+    'Widget',
     'Manifest',
     'Node',
     'Changelog',
