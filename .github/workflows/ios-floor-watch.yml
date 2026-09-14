@@ -72,8 +72,9 @@ jobs:
           # adds nothing a reader does not already have, while a further
           # move before the first issue is closed is news and gets its
           # own.
-          existing=$(gh api "repos/${REPO}/issues?state=open" \
-            --jq --arg title "$title" '[.[] | select(.title == $title)] | length')
+          existing=$(gh api --paginate --slurp \
+            "repos/${REPO}/issues?state=open&per_page=100" \
+            --jq --arg title "$title" '[.[][] | select(.title == $title)] | length')
           if ((existing > 0)); then
             printf 'the iOS floor watch issue for %s is already open; not duplicating\n' "$minimum"
             exit 0
