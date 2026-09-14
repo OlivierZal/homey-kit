@@ -4,9 +4,10 @@
 # same job, steps and pins, with `workflow_call` in place of the
 # triggers the caller keeps. Hosted here rather than in configs because
 # it is Homey process, like the floor watch beside it: a change costs
-# the three apps an adoption, not the whole family. The caller's
-# checkout resolves `./.github/actions/setup-node-and-install` from its
-# own tree, so the composite action stays in each app. Unlike a
+# the three apps an adoption, not the whole family. The install step
+# reaches `.github/actions/setup-node-and-install` through `$/`, GitHub's
+# self-repository syntax: THIS repository at the running commit, so the
+# apps carry no copy of the composite action (since 6.2.0). Unlike a
 # release-only reusable, this one proves itself on every app pull
 # request. Callers pin it like the npm package — same tag, one version
 # (configs' `check-pins.sh` polices the pair).
