@@ -9,7 +9,4 @@ export {
   homeyApiPost,
   homeyApiPut,
 } from './promise-api.ts'
-export {
-  type WidgetFreshnessHost,
-  watchWidgetFreshness,
-} from './watch-widget-freshness.ts'
+export { watchWidgetFreshness } from './watch-widget-freshness.ts'

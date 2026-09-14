@@ -35,7 +35,4 @@ export const watchSettingsFreshness = async (homey: Homey): Promise<boolean> =>
         },
       )
     },
-    subscribe: (onPoke) => {
-      homey.on('webview_hashes_changed', onPoke)
-    },
   })

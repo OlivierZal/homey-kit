@@ -278,26 +278,10 @@ describe(parseFormValue, () => {
     expect(parseFormValue(checkbox)).toBeNull()
   })
 
-  // The strategy parameter is passed by no consumer in the family and is
-  // scheduled out in the next major; while the contract keeps it, these
-  // two tests keep the branch covered (see CLAUDE.md).
-  it('should hand a bounded number input to the number strategy', () => {
-    const input = createInput({
-      id: 'target',
-      max: 30,
-      min: 10,
-      type: 'number',
-      value: '35',
-    })
-    const clamp = vi.fn<(input: HTMLInputElement) => number>(({ max }) =>
-      Number(max),
-    )
-
-    expect(parseFormValue(input, clamp)).toBe(30)
-    expect(clamp).toHaveBeenCalledWith(input)
-  })
-
-  it('should fall back to the plain read without a number strategy', () => {
+  // 6.0.0 dropped the bounded-number strategy parameter (passed by no
+  // consumer in the family): a bounded input reads through `Number()`
+  // like any other value, its bounds the page's business.
+  it('should read a bounded number input like any other value', () => {
     const input = createInput({
       id: 'target',
       max: 30,
@@ -307,18 +291,6 @@ describe(parseFormValue, () => {
     })
 
     expect(parseFormValue(input)).toBe(35)
-  })
-
-  it('should not treat a half-bounded number input as bounded', () => {
-    const parseNumber = vi.fn<() => number>(() => 0)
-    const noMax = createInput({ id: 'floor', min: 10, type: 'number' })
-    noMax.value = '12'
-    const noMin = createInput({ id: 'ceiling', max: 30, type: 'number' })
-    noMin.value = '12'
-
-    expect(parseFormValue(noMax, parseNumber)).toBe(12)
-    expect(parseFormValue(noMin, parseNumber)).toBe(12)
-    expect(parseNumber).not.toHaveBeenCalled()
   })
 
   it('should read the boolean strings as booleans', () => {

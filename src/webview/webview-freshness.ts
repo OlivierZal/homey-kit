@@ -15,8 +15,8 @@
 // (unstamped page, unreachable route, unknown entry, denied storage):
 // a wrong guess must never take a working webview down. That rule is
 // enforced call by call, not by a catch-all: EVERY call leaving this
-// module — the caller's `fetchHashes`, `report` and `subscribe`, the
-// listener registration, and each page API — goes through a fence, so
+// module — the caller's `fetchHashes` and `report`, the listener
+// registration, and each page API — goes through a fence, so
 // each degradation is reachable by a test.
 
 const REFETCH_GUARD_KEY = 'webview_refetched_for'
@@ -250,20 +250,16 @@ export const ensureFreshWebview = async (
  */
 export interface WatchWebviewFreshnessOptions {
   /**
-  The page's key in the served hash manifest.
+   * The page's key in the served hash manifest.
    */
   readonly entry: string
   /**
-  Optional diagnostics sink receiving each refetch decision, deduplicated.
+   * Optional diagnostics sink receiving each refetch decision,
+   * deduplicated.
    */
   readonly report?: ((message: string) => void) | undefined
   /**
-   * Optional subscription to the app's `webview_hashes_changed` poke:
-   * receives the re-check to register.
-   */
-  readonly subscribe?: ((onPoke: () => void) => void) | undefined
-  /**
-  Bridge call returning the live hashes; the transport is the caller's.
+   * Bridge call returning the live hashes; the transport is the caller's.
    */
   readonly fetchHashes: () => Promise<Partial<Record<string, string>>>
 }
@@ -314,11 +310,12 @@ const createRunner = ({
 // restores on a surviving page what the remount gives away elsewhere.
 //
 // It carries that guarantee ALONE. The app's `webview_hashes_changed`
-// poke cannot: it is emitted at the end of the app's own `onInit`,
-// i.e. at the instant the restart has just disconnected every open
-// page, so its audience is absent by construction — measured
-// on-device, an open page produced no hash call and no breadcrumb.
-// Never fold this trigger into that one.
+// poke, subscribed here through 5.x, could not: it was emitted at the
+// end of the app's own `onInit`, i.e. at the instant the restart had
+// just disconnected every open page, so its audience was absent by
+// construction — measured on-device, an open page produced no hash
+// call and no breadcrumb. 6.0.0 removed the channel; never re-add a
+// poke as a substitute for this trigger.
 //
 // Registration is fail-open: a page that cannot observe visibility
 // keeps its boot check.
@@ -345,11 +342,9 @@ const whenVisible = (recheck: () => void): void => {
  * Runs the freshness handshake at boot and re-runs it whenever the page
  * returns to the foreground — the trigger that covers a webview
  * surviving an app restart, where no new document (and so no boot
- * check) ever happens. The app's poke is subscribed too when a channel
- * is given, but it guarantees nothing on its own: it fires while open
- * pages are disconnected. A refetch stays bounded to one per identity
- * by the handshake's guard, and no trigger fires once one is issued.
- * @param options - The handshake's inputs plus the app's poke channel.
+ * check) ever happens. A refetch stays bounded to one per identity by
+ * the handshake's guard, and no trigger fires once one is issued.
+ * @param options - The handshake's inputs.
  * @returns Whether the boot check issued a refetch — the caller must then skip its own init: the document is about to be replaced.
  * @category Webview
  */
@@ -365,9 +360,6 @@ export const watchWebviewFreshness = async (
     pending = run()
   }
   onVisible(recheck)
-  attempt(() => {
-    options.subscribe?.(recheck)
-  })
   // A trigger can fire while the boot check is still in flight, and it
   // is then the one holding the verdict: the boot check reports no
   // refetch of its own once another has been issued. No blanket catch

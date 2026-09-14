@@ -1,14 +1,12 @@
 // @vitest-environment happy-dom
 import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { WidgetApi } from '../../src/widget/promise-api.ts'
 import { getMockCallArg, settleDetached } from '../../src/testing/helpers.ts'
-import {
-  type WidgetFreshnessHost,
-  watchWidgetFreshness,
-} from '../../src/widget/watch-widget-freshness.ts'
+import { watchWidgetFreshness } from '../../src/widget/watch-widget-freshness.ts'
 
 // The orchestrator under test owns the WIRING: the entry key, the two
-// routes and the poke channel over the promise-native transport. The
+// routes over the promise-native transport. The
 // handshake's own behavior (guards, fences, triggers) is pinned in
 // `webview-freshness.test.ts`.
 
@@ -28,9 +26,8 @@ const hashRoutes = (hash: string): Partial<Record<string, unknown>> => ({
 })
 
 interface Harness {
-  api: Mock<WidgetFreshnessHost['api']>
-  homey: WidgetFreshnessHost
-  emit: (event: string) => void
+  api: Mock<WidgetApi['api']>
+  homey: WidgetApi
 }
 
 const install = ({
@@ -40,25 +37,13 @@ const install = ({
   failures?: Partial<Record<string, Error>>
   routes?: Partial<Record<string, unknown>>
 } = {}): Harness => {
-  const listeners = new Map<string, () => void>()
-  const api = vi.fn<WidgetFreshnessHost['api']>(async (method, path) => {
+  const api = vi.fn<WidgetApi['api']>(async (method, path) => {
     const failure = failures[`${method} ${path}`]
     return failure === undefined
       ? Promise.resolve(routes[`${method} ${path}`])
       : Promise.reject(failure)
   })
-  return {
-    api,
-    homey: {
-      api,
-      on: (event, listener): void => {
-        listeners.set(event, listener)
-      },
-    },
-    emit: (event: string): void => {
-      listeners.get(event)?.()
-    },
-  }
+  return { api, homey: { api } }
 }
 
 describe(watchWidgetFreshness, () => {
@@ -124,31 +109,12 @@ describe(watchWidgetFreshness, () => {
 
   it('should swallow a failing hash fetch and stay put', async () => {
     stampPage('aaaaaaaa')
-    const { emit, homey } = install({
+    const { homey } = install({
       failures: { 'GET /webview-hashes': new Error('bridge down') },
     })
 
     await expect(watchWidgetFreshness(homey, ENTRY)).resolves.toBe(false)
 
-    // The poke's recheck fails the same way and must not throw either.
-    expect(() => {
-      emit('webview_hashes_changed')
-    }).not.toThrow()
-
     await settleDetached()
-  })
-
-  it('should re-run the handshake on the app poke', async () => {
-    stampPage('aaaaaaaa')
-    const { api, emit, homey } = install({ routes: hashRoutes('aaaaaaaa') })
-    await watchWidgetFreshness(homey, ENTRY)
-    const hashCalls = (): number =>
-      api.mock.calls.filter(([, path]) => path === '/webview-hashes').length
-    const before = hashCalls()
-
-    emit('webview_hashes_changed')
-    await settleDetached()
-
-    expect(hashCalls()).toBe(before + 1)
   })
 })

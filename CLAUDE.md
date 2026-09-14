@@ -204,15 +204,18 @@ widgets. The ONE surface with no remount is a mobile settings webview
 left open across an app restart: no new document, no boot check —
 that is what the foreground (visibilitychange) trigger exists for.
 
-The app's `webview_hashes_changed` poke guarantees nothing on its own:
-it is emitted at the end of the app's `onInit`, i.e. at the instant the
-restart has just disconnected every open page, so its audience is
+The app's `webview_hashes_changed` poke guaranteed nothing on its own:
+it was emitted at the end of the app's `onInit`, i.e. at the instant
+the restart had just disconnected every open page, so its audience was
 absent by construction — measured on-device, an open page produced no
-hash call and no breadcrumb. It is kept because it costs nothing where
-it does arrive. NEVER fold the foreground trigger into it.
+hash call and no breadcrumb. 5.x kept it because it cost nothing where
+it arrived; 6.0.0 removed the channel (the `subscribe` option, the
+`WidgetFreshnessHost` type, the `homey.on` lines in both wrappers) and
+the three apps stopped emitting it. NEVER re-add a poke as a substitute
+for the foreground trigger.
 
 Every call leaving `webview-freshness.ts` and `boot.ts` is fenced call
-by call — caller sinks (`report`, `subscribe`, `onError`, `height`),
+by call — caller sinks (`report`, `onError`, `height`),
 page APIs, storage — so each degradation is reachable by a test; no
 catch-all wrappers (an unreachable filet is untestable dead code, and
 the 100 % bar rejects it rightly). One refetch per identity, through a
@@ -253,26 +256,19 @@ fenced FIRST for that reason.
   `homey.settings` fits without a `(key: string)` widening
   (`tests/types/structural-hosts.ts` pins that, together with the real
   `Homey`/`HomeyWidget` types against the scheduler and the widget host).
-- `parseFormValue` KEEPS its `parseNumber` strategy parameter through
-  5.x, and it is scheduled for removal in the next major — the 2026-09
-  verdict on the "reached by no consumer" finding, corrected once by the
-  dry adoptions. The draft verdict had the second reader (com.heatzy)
-  adopt the reader WITH its bounded-number strategy, and it cannot:
-  every device-setting control that page builds is a `<select>`
-  (`createSelect` over `booleanOptions` or the manifest's dropdown ids),
-  and the strategy branch opens only for a `type="number"` input
-  carrying both bounds. com.melcloud's two call sites are
-  single-argument, and its one page with bounded number inputs (the
-  protection min/max pairs) applies its throwing, localized strategy to
-  the input directly and clamps the pair on the write — the hook is
-  bypassed by the only page that has such a strategy. So after 5.2.0
-  the branch has NO consumer in the family: com.heatzy imports
-  `parseFormValue(element)` plain and deletes its local `processValue`,
-  which is the two-apps bar met for the READER, not for the strategy.
-  Dropping the parameter is a `./dom` signature change — a major by
-  the contract, whatever the callers pass — so it rides to 6.0.0; until
-  then the kit's own tests keep the branch covered, and a consumer that
-  needs a bounds strategy re-enters it with that consumer.
+- `parseFormValue` LOST its `parseNumber` strategy parameter in 6.0.0
+  — the 2026-09 verdict on the "reached by no consumer" finding,
+  executed at the major it was scheduled for. The draft verdict had the
+  second reader (com.heatzy) adopt the reader WITH its bounded-number
+  strategy, and it could not: every device-setting control that page
+  builds is a `<select>`, and the branch opened only for a
+  `type="number"` input carrying both bounds. com.melcloud's call sites
+  are single-argument, and its one page with bounded number inputs
+  (the protection min/max pairs) applies its throwing, localized
+  strategy to the input directly and clamps the pair on the write. So
+  the branch had NO consumer in the family: the reader met the
+  two-apps bar, the strategy never did. A consumer that needs a bounds
+  strategy re-enters it with that consumer, as a new argument.
 - `parseFormValue` reads numbers by VALUE, not by control: a `<select>`
   whose option ids are numeric strings reads as numbers (com.melcloud's
   temperature-grid select relies on it — never gate the coercion on

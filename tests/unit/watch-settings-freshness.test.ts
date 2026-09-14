@@ -2,11 +2,7 @@ import type Homey from 'homey/lib/HomeySettings.js'
 import { type Mock, afterEach, describe, expect, it, vi } from 'vitest'
 
 import { watchSettingsFreshness } from '../../src/settings/watch-settings-freshness.ts'
-import {
-  assertDefined,
-  getMockCallArg,
-  mock,
-} from '../../src/testing/helpers.ts'
+import { getMockCallArg, mock } from '../../src/testing/helpers.ts'
 
 // The orchestrator under test owns the WIRING: the entry key, the two
 // routes and the poke channel. The handshake's own behavior (guards,
@@ -47,7 +43,6 @@ const isCallback = (value: unknown): value is ErrorFirst =>
 interface Harness {
   api: Mock<SdkApi>
   homey: Homey
-  pokes: Map<string, () => void>
   replace: Mock<(url: string) => void>
 }
 
@@ -79,7 +74,6 @@ const install = ({
       store.set(key, value)
     },
   }
-  const pokes = new Map<string, () => void>()
   const api = vi.fn<SdkApi>((method, path, ...rest): void => {
     const [third, fourth] = rest
     if (method === 'GET' && path === '/webview-hashes' && isCallback(third)) {
@@ -97,13 +91,8 @@ const install = ({
       fourth(new Error('breadcrumb lost'))
     }
   })
-  const homey = mock<Homey>({
-    api,
-    on: (event: string, listener: () => void): void => {
-      pokes.set(event, listener)
-    },
-  })
-  return { api, homey, pokes, replace }
+  const homey = mock<Homey>({ api })
+  return { api, homey, replace }
 }
 
 const STALE_PAGE = [new FakeReference('src', 'index.js?v=00000000')]
@@ -144,22 +133,6 @@ describe(watchSettingsFreshness, () => {
     await expect(watchSettingsFreshness(homey)).resolves.toBe(false)
 
     expect(replace).not.toHaveBeenCalled()
-  })
-
-  it('should re-check when the app pokes webview_hashes_changed', async () => {
-    const { api, homey, pokes } = install({
-      hashes: { settings: 'bbbb2222' },
-      references: FRESH_PAGE,
-    })
-
-    await watchSettingsFreshness(homey)
-    const poke = pokes.get('webview_hashes_changed')
-    assertDefined(poke)
-    poke()
-
-    expect(api.mock.calls.filter(([method]) => method === 'GET')).toHaveLength(
-      2,
-    )
   })
 
   it('should ride the boot-error route with a swallowed outcome when the handshake reports', async () => {

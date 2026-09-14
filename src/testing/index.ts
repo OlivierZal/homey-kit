@@ -21,9 +21,3 @@ export {
   mock,
   settleDetached,
 } from './helpers.ts'
-export {
-  type WebviewFloorFindings,
-  type WebviewFloorPerimeter,
-  analyzeWebviewFloor,
-  getQuotedEntries,
-} from './webview-floor.ts'
