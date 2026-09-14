@@ -37,11 +37,11 @@ const PART_SCALE = 10_000
  */
 export interface ChangelogEntry {
   /**
-  The excerpt to show.
+   * The excerpt to show.
    */
   readonly excerpt: string
   /**
-  The version it describes.
+   * The version it describes.
    */
   readonly version: string
 }
@@ -52,7 +52,7 @@ export interface ChangelogEntry {
  */
 export interface ChangelogSelection {
   /**
-  Excerpts in chronological order — announce them in this order.
+   * Excerpts in chronological order — announce them in this order.
    */
   readonly entries: readonly ChangelogEntry[]
   /**
@@ -68,20 +68,20 @@ export interface ChangelogSelection {
  */
 export interface ChangelogSelectionOptions {
   /**
-  The parsed `.homeychangelog.json`: version, then language, then excerpt.
+   * The parsed `.homeychangelog.json`: version, then language, then excerpt.
    */
   readonly changelog: Partial<Record<string, Partial<Record<string, string>>>>
   /**
-  The last version announced, from app settings; absent on a first
-  install.
+   * The last version announced, from app settings; absent on a first
+   * install.
    */
   readonly from: string | null | undefined
   /**
-  The user's language; falls back to English per version.
+   * The user's language; falls back to English per version.
    */
   readonly language: string
   /**
-  The running version.
+   * The running version.
    */
   readonly to: string
 }

@@ -19,51 +19,51 @@
  */
 export interface DriverSetting {
   /**
-  The driver this control belongs to.
+   * The driver this control belongs to.
    */
   readonly driverId: string
   /**
-  The driver's display name, in the requested language.
+   * The driver's display name, in the requested language.
    */
   readonly driverLabel: string
   /**
-  The setting id, which the app reads and writes.
+   * The setting id, which the app reads and writes.
    */
   readonly id: string
   /**
-  The control's label, in the requested language.
+   * The control's label, in the requested language.
    */
   readonly title: string
   /**
-  The control kind, as the manifest declares it.
+   * The control kind, as the manifest declares it.
    */
   readonly type: string
   /**
-  The group this control belongs to, when the manifest nests it.
+   * The group this control belongs to, when the manifest nests it.
    */
   readonly groupId?: string | undefined
   /**
-  The group's label, in the requested language.
+   * The group's label, in the requested language.
    */
   readonly groupLabel?: string
   /**
-  The highest value a numeric control accepts.
+   * The highest value a numeric control accepts.
    */
   readonly max?: number | undefined
   /**
-  The lowest value a numeric control accepts.
+   * The lowest value a numeric control accepts.
    */
   readonly min?: number | undefined
   /**
-  The hint shown while a text control is empty.
+   * The hint shown while a text control is empty.
    */
   readonly placeholder?: string
   /**
-  The unit shown beside a numeric control.
+   * The unit shown beside a numeric control.
    */
   readonly units?: string | undefined
   /**
-  The choices a select control offers.
+   * The choices a select control offers.
    */
   readonly values?: readonly DriverSettingValue[] | undefined
 }
@@ -74,11 +74,11 @@ export interface DriverSetting {
  */
 export interface DriverSettingValue {
   /**
-  The value stored when this choice is picked.
+   * The value stored when this choice is picked.
    */
   readonly id: string
   /**
-  The choice's label, in the requested language.
+   * The choice's label, in the requested language.
    */
   readonly label: string
 }
@@ -90,7 +90,7 @@ export interface DriverSettingValue {
  */
 export interface LocalizedStrings extends Partial<Record<string, string>> {
   /**
-  The English string, always present.
+   * The English string, always present.
    */
   readonly en: string
 }
@@ -101,11 +101,11 @@ export interface LocalizedStrings extends Partial<Record<string, string>> {
  */
 export interface LoginSetting extends PairSetting {
   /**
-  The step that holds the login form.
+   * The step that holds the login form.
    */
   readonly id: 'login'
   /**
-  The form's labels and placeholders, keyed by field.
+   * The form's labels and placeholders, keyed by field.
    */
   readonly options: Readonly<Record<string, string | LocalizedStrings>>
 }
@@ -116,22 +116,22 @@ export interface LoginSetting extends PairSetting {
  */
 export interface ManifestDriver {
   /**
-  The driver id.
+   * The driver id.
    */
   readonly id: string
   /**
-  The driver's display name: localized strings, or the plain string the
-  manifest admits just as well (com.heatzy ships the plain form) — a
-  localized value is served in the caller's language, a plain string as
-  is.
+   * The driver's display name: localized strings, or the plain string the
+   * manifest admits just as well (com.heatzy ships the plain form) — a
+   * localized value is served in the caller's language, a plain string as
+   * is.
    */
   readonly name: string | LocalizedStrings
   /**
-  The pairing steps, one of which may be the login form.
+   * The pairing steps, one of which may be the login form.
    */
   readonly pair?: readonly (LoginSetting | PairSetting)[]
   /**
-  The setting groups the driver declares.
+   * The setting groups the driver declares.
    */
   readonly settings?: readonly ManifestDriverSetting[]
 }
@@ -142,15 +142,15 @@ export interface ManifestDriver {
  */
 export interface ManifestDriverSetting {
   /**
-  The group's localized label.
+   * The group's localized label.
    */
   readonly label: LocalizedStrings
   /**
-  The controls the group holds.
+   * The controls the group holds.
    */
   readonly children?: readonly ManifestDriverSettingData[]
   /**
-  The group id, absent on an ungrouped declaration.
+   * The group id, absent on an ungrouped declaration.
    */
   readonly id?: string
 }
@@ -161,31 +161,31 @@ export interface ManifestDriverSetting {
  */
 export interface ManifestDriverSettingData {
   /**
-  The setting id.
+   * The setting id.
    */
   readonly id: string
   /**
-  The control's localized label.
+   * The control's localized label.
    */
   readonly label: LocalizedStrings
   /**
-  The control kind.
+   * The control kind.
    */
   readonly type: string
   /**
-  The highest value a numeric control accepts.
+   * The highest value a numeric control accepts.
    */
   readonly max?: number
   /**
-  The lowest value a numeric control accepts.
+   * The lowest value a numeric control accepts.
    */
   readonly min?: number
   /**
-  The unit shown beside a numeric control.
+   * The unit shown beside a numeric control.
    */
   readonly units?: string
   /**
-  The choices a select control offers.
+   * The choices a select control offers.
    */
   readonly values?: readonly {
     readonly id: string
@@ -199,7 +199,7 @@ export interface ManifestDriverSettingData {
  */
 export interface PairSetting {
   /**
-  The step id.
+   * The step id.
    */
   readonly id: string
 }
