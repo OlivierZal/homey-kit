@@ -23,11 +23,11 @@ const REFETCH_GUARD_KEY = 'webview_refetched_for'
 
 const STAMP = /\?v=(?<hash>[0-9a-f]+)$/u
 
-// Every call that leaves this module — caller-supplied diagnostics and
-// subscription, plus the page APIs themselves — is fenced. This module
-// sits on the boot path: a page must start even when its own logger,
-// its poke channel or a detached document misbehaves, and a degraded
-// self-heal is always preferable to a page that never appears.
+// Every call that leaves this module — the caller-supplied diagnostics
+// and the page APIs themselves — is fenced. This module sits on the
+// boot path: a page must start even when its own logger or a detached
+// document misbehaves, and a degraded self-heal is always preferable to
+// a page that never appears.
 const attempt = (action: () => void): void => {
   try {
     action()
@@ -244,8 +244,7 @@ export const ensureFreshWebview = async (
 }
 
 /**
- * Wiring for {@link watchWebviewFreshness}: the handshake's inputs plus
- * the app's own poke channel.
+ * Wiring for {@link watchWebviewFreshness}: the handshake's inputs.
  * @category Webview
  */
 export interface WatchWebviewFreshnessOptions {

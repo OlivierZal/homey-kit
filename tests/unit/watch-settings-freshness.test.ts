@@ -4,9 +4,9 @@ import { type Mock, afterEach, describe, expect, it, vi } from 'vitest'
 import { watchSettingsFreshness } from '../../src/settings/watch-settings-freshness.ts'
 import { getMockCallArg, mock } from '../../src/testing/helpers.ts'
 
-// The orchestrator under test owns the WIRING: the entry key, the two
-// routes and the poke channel. The handshake's own behavior (guards,
-// fences, triggers) is pinned in `webview-freshness.test.ts`.
+// The orchestrator under test owns the WIRING: the entry key and the
+// two routes. The handshake's own behavior (guards, fences, triggers)
+// is pinned in `webview-freshness.test.ts`.
 
 class FakeReference {
   readonly #reference: string
