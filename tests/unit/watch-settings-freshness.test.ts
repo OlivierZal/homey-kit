@@ -56,10 +56,9 @@ const install = ({
   spent?: string | null
 }): Harness => {
   const replace = vi.fn<(url: string) => void>()
-  const store = new Map<string, string>()
-  if (spent !== null) {
-    store.set('webview_refetched_for', spent)
-  }
+  const store = new Map<string, string>(
+    spent === null ? [] : [['webview_refetched_for', spent]],
+  )
   globals.document = {
     visibilityState: 'visible',
     addEventListener: (): void => {

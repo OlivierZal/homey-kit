@@ -55,10 +55,9 @@ const install = ({
   stored?: string | null
 }): Page => {
   const replace = vi.fn<(url: string) => void>()
-  const store = new Map<string, string>()
-  if (stored !== null) {
-    store.set('webview_refetched_for', stored)
-  }
+  const store = new Map<string, string>(
+    stored === null ? [] : [['webview_refetched_for', stored]],
+  )
   const listeners = new Map<string, () => void>()
   const page = {
     visibilityState: 'visible',

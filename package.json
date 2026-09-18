@@ -1,6 +1,6 @@
 {
   "name": "@olivierzal/homey-kit",
-  "version": "6.2.0",
+  "version": "6.2.1",
   "description": "Shared Homey runtime for the OlivierZal apps: webview kit, settings transport, common helpers, table-driven test kernels",
   "keywords": [
     "homey",
@@ -79,7 +79,7 @@
   },
   "prettier": "@olivierzal/configs/prettier",
   "devDependencies": {
-    "@olivierzal/configs": "6.3.1",
+    "@olivierzal/configs": "6.4.1",
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12",
     "@types/node": "^26.2.0",
     "@typescript/native": "npm:typescript@^7.0.2",
