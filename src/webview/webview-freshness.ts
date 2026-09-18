@@ -237,10 +237,9 @@ export const ensureFreshWebview = async (
     return false
   }
   const expected = await fetchExpected(entry, fetchHashes)
-  if (expected === undefined || expected === identity) {
-    return false
-  }
-  return refetchOnce(identity, expected, report)
+  return expected === undefined || expected === identity
+    ? false
+    : refetchOnce(identity, expected, report)
 }
 
 /**
