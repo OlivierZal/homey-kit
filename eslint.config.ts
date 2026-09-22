@@ -20,7 +20,10 @@ const WEBVIEW_FLOOR_FILES = [
 
 const config: Config[] = [
   // tests/fixtures holds TEXT the kernels read, not code.
-  { ignores: ['coverage/', 'dist/', 'tests/fixtures/'] },
+  // `docs/` is typedoc's output (gitignored), swept by a local run the
+  // moment `npm run docs` has produced it — the three sibling
+  // libraries already ignore it.
+  { ignores: ['coverage/', 'dist/', 'docs/', 'tests/fixtures/'] },
   ...library(),
   {
     // These two subpaths reach outside the package on purpose, and the
