@@ -237,9 +237,11 @@ export const ensureFreshWebview = async (
     return false
   }
   const expected = await fetchExpected(entry, fetchHashes)
-  return expected === undefined || expected === identity
-    ? false
-    : refetchOnce(identity, expected, report)
+  return (
+    expected !== undefined &&
+    expected !== identity &&
+    refetchOnce(identity, expected, report)
+  )
 }
 
 /**
@@ -293,9 +295,8 @@ const createRunner = ({
   return {
     reportOnce,
     run: async (): Promise<boolean> =>
-      isSpent
-        ? false
-        : spend(await ensureFreshWebview(entry, fetchHashes, reportOnce)),
+      !isSpent &&
+      spend(await ensureFreshWebview(entry, fetchHashes, reportOnce)),
   }
 }
 
