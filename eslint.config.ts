@@ -1,5 +1,5 @@
-import type { Config } from 'eslint/config'
 import { library, webviewFloorBlock } from '@olivierzal/configs/eslint'
+import { type Config, defineConfig } from 'eslint/config'
 
 // Every module a webview bundle can reach carries the es2023 floor:
 // the webview-facing subpaths, plus every flat root module — the root
@@ -18,8 +18,8 @@ const WEBVIEW_FLOOR_FILES = [
   'src/widget/**/*.ts',
 ]
 
-const config: Config[] = [
-  // tests/fixtures holds TEXT the kernels read, not code.
+const config: Config[] = defineConfig([
+  // `tests/fixtures` holds TEXT the kernels read, not code.
   // `docs/` is typedoc's output (gitignored), swept by a local run the
   // moment `npm run docs` has produced it — the three sibling
   // libraries already ignore it.
@@ -42,6 +42,6 @@ const config: Config[] = [
     },
   },
   webviewFloorBlock(WEBVIEW_FLOOR_FILES),
-]
+])
 
 export default config

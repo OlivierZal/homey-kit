@@ -58,7 +58,7 @@ export function getMockCallArg<T>(
   callIndex: number,
   argIndex: number,
 ): T
-/* eslint-enable @typescript-eslint/no-unnecessary-type-parameters */
+/* eslint-enable @typescript-eslint/no-unnecessary-type-parameters -- end of the return-typed `getMockCallArg` overload */
 export function getMockCallArg(
   mockFunction: RecordedCalls,
   callIndex: number,

@@ -5,7 +5,7 @@ workflow expected before opening a pull request.
 
 ## Prerequisites
 
-- Node.js as [`.nvmrc`](.nvmrc) names it — 22.22.2, the install floor
+- Node.js as [`.nvmrc`](.nvmrc) names it — 22.23.0, the install floor
   of the tooling tree (derived in `@olivierzal/configs`, re-derived
   there when the tree moves). `engines.node` in
   [`package.json`](package.json) states a different, lower number on

@@ -16,16 +16,20 @@
  */
 export interface WidgetApi {
   /**
-   * The SDK's promise-returning app-API call. Declared in method syntax
-   * deliberately: the real `HomeyWidget` narrows `method` to four
-   * literals, and a property-typed function member checks its
-   * parameters contravariantly — the SDK instance was not assignable to
-   * the wider `string`, which forced every consumer to keep a local
-   * copy of this transport. Method signatures check bivariantly, which
-   * is exactly the seam a structural SDK type needs.
+   * The SDK's promise-returning app-API call, in property syntax with
+   * the SDK's own `method` union: a property-typed function member
+   * checks its parameters contravariantly, so the real `HomeyWidget` —
+   * which narrows `method` to exactly these four literals — fits only
+   * because the union here IS the SDK's. The wider `string` this seam
+   * once carried needed a bivariant method signature to stay
+   * assignable; the exact union needs no escape, and a caller passing
+   * a verb the SDK refuses now fails to compile instead of at runtime.
    */
-  // eslint-disable-next-line @typescript-eslint/method-signature-style -- the rule exists to force contravariant parameter checking; here bivariance is the point: the widget SDK's `api` narrows `method` to four literals and must stay assignable to this wider structural type
-  api(method: string, path: string, body?: object): Promise<unknown>
+  api: (
+    method: 'DELETE' | 'GET' | 'POST' | 'PUT',
+    uri: string,
+    body?: object,
+  ) => Promise<unknown>
 }
 
 /**
