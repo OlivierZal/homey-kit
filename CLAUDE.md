@@ -6,12 +6,13 @@ and pinned EXACTLY by every consumer — adoption is a reviewed PR per
 release, never a range. ESM only, Node >= 22.20 — the measured device
 floor `engines` declares; what SHIPS is bounded further by where each
 module runs (see the floors below). `.nvmrc` names a DIFFERENT number
-on purpose: 22.22.2, the family's install floor — the lowest Node the
+on purpose: 22.23.0, the family's install floor — the lowest Node the
 tooling `@olivierzal/configs` pulls into every tree installs on,
-derived in configs (from `eslint-plugin-package-json`'s
-`^22.22.2 || >=24.15.0`, 2026-09-07) and re-derived there when the tree
-moves, never nudged by hand here. A fresh clone needs the install floor;
-the device needs the device floor; neither line is the other.
+derived in configs (from `eslint-plugin-es-x`'s
+`^22.23.0 || ^24.18.0 || >=26.4.0`, 2026-09-28, configs 7.0.0) and
+re-derived there when the tree moves, never nudged by hand here. A
+fresh clone needs the install floor; the device needs the device floor;
+neither line is the other.
 
 The README speaks to the package's CONSUMER (install, subpaths, wiring
 examples); this file speaks to its MAINTAINER. Doctrine evolves HERE

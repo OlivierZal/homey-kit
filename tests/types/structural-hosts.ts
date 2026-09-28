@@ -20,7 +20,8 @@ interface TestSettings {
 }
 
 // The widget SDK instance is the transport as-is: its `api` narrows
-// the method to four literals (bivariant method signature).
+// the method to four literals, and the host type carries that exact
+// union in property syntax (contravariant, so the union must match).
 export const canWidgetHost: HomeyWidget extends WidgetApi ? true : false = true
 
 // The Homey instance is the scheduler as-is — its `this`-bound,
