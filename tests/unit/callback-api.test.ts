@@ -27,12 +27,10 @@ const isCallback = (value: unknown): value is ErrorFirst =>
   typeof value === 'function'
 
 // The settings SDK double: `api`/`confirm` invoke their error-first
-// callback synchronously with whatever the test seeds. The callback
-// sits third on body-less verbs and fourth otherwise.
-const createHomey = ({
-  error = null,
-  result,
-}: { error?: Error | null; result?: unknown } = {}): {
+// callback synchronously with the result the test seeds and no error —
+// the rejection path is pinned on `homeyCallback` directly. The
+// callback sits third on body-less verbs and fourth otherwise.
+const createHomey = ({ result }: { result?: unknown } = {}): {
   api: ReturnType<typeof vi.fn<SdkApi>>
   confirm: ReturnType<typeof vi.fn<SdkConfirm>>
   homey: Homey
@@ -40,11 +38,11 @@ const createHomey = ({
   const api = vi.fn<SdkApi>((...args) => {
     const callback = isCallback(args[3]) ? args[3] : args[2]
     if (isCallback(callback)) {
-      callback(error, result)
+      callback(null, result)
     }
   })
   const confirm = vi.fn<SdkConfirm>((_message, _icon, callback) => {
-    callback(error, result === true)
+    callback(null, result === true)
   })
   return { api, confirm, homey: mock<Homey>({ api, confirm }) }
 }
