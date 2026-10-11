@@ -136,7 +136,7 @@ const collectNotifiable = (
         return []
       }
       const excerpt = pickExcerpt(changelog[version], language)
-      return excerpt === undefined ? [] : [{ excerpt, key, version }]
+      return excerpt === undefined ? [] : { excerpt, key, version }
     })
     .toSorted((left, right) => left.key - right.key)
     .map(({ excerpt, version }) => ({ excerpt, version }))

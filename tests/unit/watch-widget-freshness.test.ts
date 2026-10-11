@@ -12,12 +12,16 @@ import { watchWidgetFreshness } from '../../src/widget/watch-widget-freshness.ts
 
 const ENTRY = 'ata-group-setting'
 
+// The one identity every stamped page here carries: a live map that
+// answers it is fresh, any other answer is stale.
+const PAGE_HASH = 'aaaaaaaa'
+
 // A stamped reference the identity join reads; a preload hint rather
 // than a `<script src>`, which the DOM environment would try to load.
-const stampPage = (hash: string): void => {
+const stampPage = (): void => {
   const reference = document.createElement('link')
   reference.rel = 'modulepreload'
-  reference.href = `index.js?v=${hash}`
+  reference.href = `index.js?v=${PAGE_HASH}`
   document.head.append(reference)
 }
 
@@ -53,7 +57,7 @@ describe(watchWidgetFreshness, () => {
   })
 
   it('should keep an unstamped page booting without any fetch', async () => {
-    const { api, homey } = install({ routes: hashRoutes('aaaaaaaa') })
+    const { api, homey } = install({ routes: hashRoutes(PAGE_HASH) })
 
     await expect(watchWidgetFreshness(homey, ENTRY)).resolves.toBe(false)
 
@@ -61,11 +65,11 @@ describe(watchWidgetFreshness, () => {
   })
 
   it('should compare under the given entry key and keep a matching page booting', async () => {
-    stampPage('aaaaaaaa')
+    stampPage()
     // The live map only answers for the entry: a wrong key would read
     // `undefined` and stay put regardless, so the stale case below pins
     // the key together with this one.
-    const { api, homey } = install({ routes: hashRoutes('aaaaaaaa') })
+    const { api, homey } = install({ routes: hashRoutes(PAGE_HASH) })
 
     await expect(watchWidgetFreshness(homey, ENTRY)).resolves.toBe(false)
 
@@ -73,9 +77,9 @@ describe(watchWidgetFreshness, () => {
   })
 
   it('should report a mismatch that survived its refetch over the boot-error route', async () => {
-    stampPage('aaaaaaaa')
+    stampPage()
     // The guard already carries this identity: the one refetch was spent.
-    sessionStorage.setItem('webview_refetched_for', 'aaaaaaaa')
+    sessionStorage.setItem('webview_refetched_for', PAGE_HASH)
     const { api, homey } = install({ routes: hashRoutes('bbbbbbbb') })
 
     await expect(watchWidgetFreshness(homey, ENTRY)).resolves.toBe(false)
@@ -95,8 +99,8 @@ describe(watchWidgetFreshness, () => {
   })
 
   it('should swallow a failing breadcrumb post', async () => {
-    stampPage('aaaaaaaa')
-    sessionStorage.setItem('webview_refetched_for', 'aaaaaaaa')
+    stampPage()
+    sessionStorage.setItem('webview_refetched_for', PAGE_HASH)
     const { homey } = install({
       failures: { 'POST /boot-error': new Error('channel down') },
       routes: hashRoutes('bbbbbbbb'),
@@ -108,7 +112,7 @@ describe(watchWidgetFreshness, () => {
   })
 
   it('should swallow a failing hash fetch and stay put', async () => {
-    stampPage('aaaaaaaa')
+    stampPage()
     const { homey } = install({
       failures: { 'GET /webview-hashes': new Error('bridge down') },
     })

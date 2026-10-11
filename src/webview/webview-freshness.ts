@@ -94,8 +94,7 @@ const joinStamps = (): string | null => {
         (element) => {
           const reference =
             element.getAttribute('href') ?? element.getAttribute('src') ?? ''
-          const hash = STAMP.exec(reference)?.groups?.hash
-          return hash === undefined ? [] : [hash]
+          return STAMP.exec(reference)?.groups?.hash ?? []
         },
       ),
     ),

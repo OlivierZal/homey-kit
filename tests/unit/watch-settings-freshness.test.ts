@@ -8,18 +8,19 @@ import { getMockCallArg, mock } from '../../src/testing/helpers.ts'
 // two routes. The handshake's own behavior (guards, fences, triggers)
 // is pinned in `webview-freshness.test.ts`.
 
+// Every stamped reference here is a script `src`: the identity join
+// asks for `href` first and reads nothing there, as on the real page.
+const STAMP_SLOT = 'src'
+
 class FakeReference {
   readonly #reference: string
 
-  readonly #slot: string
-
-  public constructor(slot: string, reference: string) {
+  public constructor(reference: string) {
     this.#reference = reference
-    this.#slot = slot
   }
 
   public getAttribute(name: string): string | null {
-    return name === this.#slot ? this.#reference : null
+    return name === STAMP_SLOT ? this.#reference : null
   }
 }
 
@@ -94,8 +95,8 @@ const install = ({
   return { api, homey, replace }
 }
 
-const STALE_PAGE = [new FakeReference('src', 'index.js?v=00000000')]
-const FRESH_PAGE = [new FakeReference('src', 'index.js?v=bbbb2222')]
+const STALE_PAGE = [new FakeReference('index.js?v=00000000')]
+const FRESH_PAGE = [new FakeReference('index.js?v=bbbb2222')]
 
 describe(watchSettingsFreshness, () => {
   afterEach(() => {
