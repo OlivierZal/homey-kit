@@ -93,7 +93,7 @@ export const start = async (homey: HomeySettings): Promise<void> => {
     timeoutMessage: 'Timed out while loading the settings page',
   })
   if (hasFailed) {
-    surfaceError(error, 'Unhandled settings error')
+    surfaceError(error)
   }
 }
 ```
@@ -402,7 +402,7 @@ fits without widening its keys. A suite advancing fake timers imports
 the delivery:
 
 ```ts title="app"
-const { entries, omitted } = selectChangelogEntries({
+const { entries } = selectChangelogEntries({
   changelog,
   from: this.homey.settings.get('notifiedVersion'),
   language: this.homey.i18n.getLanguage(),
@@ -415,8 +415,8 @@ const { entries, omitted } = selectChangelogEntries({
 history; a downgrade yields nothing. Each version falls back to English
 when the user's language is missing, and a version translated into
 neither drops out of the series instead of ending it. Beyond five
-versions only the most recent are returned, the rest counted in
-`omitted` so the caller can say so rather than drop them silently.
+versions only the most recent five are returned; the older ones are
+dropped (8.0.0 removed the `omitted` count nothing ever read).
 
 ## Workflows
 

@@ -119,15 +119,20 @@ describe(surfaceError, () => {
     }).toThrow(error)
   })
 
-  it('wraps a non-Error rejection, with the caller message', () => {
+  it('wraps a non-Error rejection so the dev tools get a stack', () => {
     vi.useFakeTimers()
     withReportError(undefined)
 
-    surfaceError('a string', 'Unhandled settings error')
+    surfaceError('a string')
 
     expect(() => {
       vi.advanceTimersByTime(0)
-    }).toThrow('Unhandled settings error')
+    }).toThrow(
+      expect.objectContaining({
+        cause: 'a string',
+        message: 'Unhandled webview error',
+      }),
+    )
   })
 })
 
@@ -284,31 +289,6 @@ describe(trySetDocumentLanguage, () => {
     await trySetDocumentLanguage(
       vi.fn<() => Promise<string>>().mockRejectedValue(new Error('offline')),
     )
-
-    expect(document.documentElement.lang).toBe('en')
-  })
-
-  it('hands the failure to the caller sink', async () => {
-    const onError = vi.fn<(error: unknown) => void>()
-    const error = new Error('offline')
-
-    await trySetDocumentLanguage(
-      vi.fn<() => Promise<string>>().mockRejectedValue(error),
-      onError,
-    )
-
-    expect(onError).toHaveBeenCalledWith(error)
-  })
-
-  it('never aborts over a sink that itself throws', async () => {
-    await expect(
-      trySetDocumentLanguage(
-        vi.fn<() => Promise<string>>().mockRejectedValue(new Error('offline')),
-        () => {
-          throw new Error('broken sink')
-        },
-      ),
-    ).resolves.toBeUndefined()
 
     expect(document.documentElement.lang).toBe('en')
   })
