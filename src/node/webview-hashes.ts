@@ -30,17 +30,6 @@ const readManifest = async (manifestUrl: URL): Promise<string | null> => {
   }
 }
 
-const loadWebviewHashes = async (
-  manifestUrl: URL,
-): Promise<Partial<Record<string, string>>> => {
-  const content = await readManifest(manifestUrl)
-  if (content === null) {
-    return {}
-  }
-  const parsed = parseManifest(content)
-  return isStringRecord(parsed) ? parsed : {}
-}
-
 /**
  * Reads the packaged manifest; outside the packaged flow (dev suite
  * runs) it is absent and the empty map means every page treats itself
@@ -58,4 +47,11 @@ const loadWebviewHashes = async (
  */
 export const getWebviewHashes = async (
   manifestUrl: URL,
-): Promise<Partial<Record<string, string>>> => loadWebviewHashes(manifestUrl)
+): Promise<Partial<Record<string, string>>> => {
+  const content = await readManifest(manifestUrl)
+  if (content === null) {
+    return {}
+  }
+  const parsed = parseManifest(content)
+  return isStringRecord(parsed) ? parsed : {}
+}
