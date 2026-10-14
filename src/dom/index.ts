@@ -277,7 +277,6 @@ export const createLabel = (
  * @category DOM
  */
 export const createInput = (options: CreateInputOptions): HTMLInputElement => {
-  // eslint-disable-next-line unicorn/prefer-default-parameters -- `value` is null-bearing by contract (`null` and `undefined` both mean empty; com.heatzy's credential input passes `credential.value ?? null`), and a destructuring default catches only `undefined`
   const { className, id, max, min, placeholder, type, value } = options
   const input = document.createElement('input')
   applyClassName(input, className)
