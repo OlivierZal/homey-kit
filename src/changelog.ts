@@ -17,8 +17,9 @@
 const PART_COUNT = 3
 
 // A user returning after a long absence gets a readable digest, not a
-// wall of notifications; the count that did not fit is reported back so
-// the caller can say so rather than drop it silently.
+// wall of notifications: only the newest five qualify, the older ones
+// are dropped. The count that did not fit was once reported back too;
+// nothing ever read it, so 8.0.0 stopped computing it.
 const MAX_ENTRIES = 5
 
 // Store copy is authored in English and translated from it, so English
@@ -47,7 +48,7 @@ export interface ChangelogEntry {
 }
 
 /**
- * The excerpts to announce, oldest first, and how many the cap dropped.
+ * The excerpts to announce, oldest first.
  * @category Changelog
  */
 export interface ChangelogSelection {
@@ -55,11 +56,6 @@ export interface ChangelogSelection {
    * Excerpts in chronological order — announce them in this order.
    */
   readonly entries: readonly ChangelogEntry[]
-  /**
-   * Notifiable versions the cap left out, all older than `entries`. Zero
-   * on a first install: a fresh user skipped nothing.
-   */
-  readonly omitted: number
 }
 
 /**
@@ -86,7 +82,7 @@ export interface ChangelogSelectionOptions {
   readonly to: string
 }
 
-const NOTHING: ChangelogSelection = { entries: [], omitted: 0 }
+const NOTHING: ChangelogSelection = { entries: [] }
 
 // A part is digits only when the number it parses to prints back
 // identically: that rejects the empty string, padding, signs, decimals
@@ -121,7 +117,7 @@ const selectInstalled = ({
   const excerpt = pickExcerpt(changelog[to], language)
   return excerpt === undefined
     ? NOTHING
-    : { entries: [{ excerpt, version: to }], omitted: 0 }
+    : { entries: [{ excerpt, version: to }] }
 }
 
 const collectNotifiable = (
@@ -145,11 +141,9 @@ const selectRange = (
   options: ChangelogSelectionOptions,
   baseline: number,
   target: number,
-): ChangelogSelection => {
-  const notifiable = collectNotifiable(options, baseline, target)
-  const omitted = Math.max(notifiable.length - MAX_ENTRIES, 0)
-  return { entries: notifiable.slice(omitted), omitted }
-}
+): ChangelogSelection => ({
+  entries: collectNotifiable(options, baseline, target).slice(-MAX_ENTRIES),
+})
 
 /**
  * Selects the excerpts to announce, oldest first.
@@ -158,9 +152,10 @@ const selectRange = (
  * ordered by version rather than by key order — `23.10.0` follows
  * `23.9.0`. A first install (no readable `from`) yields only `to`, so a
  * new user is never handed the whole history, and a downgrade yields
- * nothing.
+ * nothing. Beyond five qualifying versions only the newest five are
+ * returned.
  * @param options - See {@link ChangelogSelectionOptions}.
- * @returns The excerpts to announce and the count the cap dropped.
+ * @returns The excerpts to announce.
  * @category Changelog
  */
 export const selectChangelogEntries = (

@@ -50,20 +50,19 @@ export const withInitTimeout = async <T>(
  * caller: `reportError` where the webview provides it, an async rethrow
  * otherwise. Never throws at the call site — surfacing a failure must
  * not create a second one.
- * @param error - The error to surface.
- * @param message - Wrapper message when the value thrown is not an Error.
+ * @param error - The error to surface; a non-Error value is wrapped in
+ * one so the dev tools get a stack.
  * @category Webview
  */
-export const surfaceError = (
-  error: unknown,
-  message: string = UNHANDLED_MESSAGE,
-): void => {
+export const surfaceError = (error: unknown): void => {
   if (typeof reportError === 'function') {
     reportError(error)
     return
   }
   setTimeout(() => {
-    throw error instanceof Error ? error : new Error(message, { cause: error })
+    throw error instanceof Error
+      ? error
+      : new Error(UNHANDLED_MESSAGE, { cause: error })
   }, 0)
 }
 
@@ -191,16 +190,14 @@ export const runWebview = async (
  * init over it: the language is cosmetic, so a failed read leaves the
  * page on its authored default.
  * @param fetchLanguage - Reads the language tag from the app.
- * @param onError - Failure sink; omit to fail silently.
  * @category Webview
  */
 export const trySetDocumentLanguage = async (
   fetchLanguage: () => Promise<string>,
-  onError?: (error: unknown) => void,
 ): Promise<void> => {
   try {
     document.documentElement.lang = await fetchLanguage()
-  } catch (error) {
-    invokeSinkSafely(onError, error)
+  } catch {
+    // Cosmetic: a failed read leaves the page on its authored default.
   }
 }

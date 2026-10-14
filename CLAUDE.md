@@ -247,7 +247,7 @@ the three apps stopped emitting it. NEVER re-add a poke as a substitute
 for the foreground trigger.
 
 Every call leaving `webview-freshness.ts` and `boot.ts` is fenced call
-by call — caller sinks (`report`, `onError`, `height`),
+by call — caller sinks (`report`, `runWebview`'s `onError`, `height`),
 page APIs, storage — so each degradation is reachable by a test; no
 catch-all wrappers (an unreachable filet is untestable dead code, and
 the 100 % bar rejects it rightly). One refetch per identity, through a
@@ -314,18 +314,20 @@ fenced FIRST for that reason.
   constraint lives on the consumer's manifest; the kit states it beside
   the reader and the README carries the pointer.
 
-**Parked for 8.0.0 (verified 2026-10-14)** — four narrowings, each
+**Shipped in 8.0.0 (2026-10-14)** — four narrowings, each
 behaviour-neutral for every installed app and each a major by the
-contract rule above: `ContractSurface` loses its `THandler` parameter
-(only ever instantiated as `unknown`; the header sentence about apps
-supplying their handler union describes the deleted suite factory);
-`surfaceError` loses its `message` parameter (every caller runs the
-default; the README's settings-page example follows); `trySetDocumentLanguage`
-loses its `onError` sink (every caller omits it; the blanket fence
-stays for the sinks that remain); `ChangelogSelection.omitted` goes
-(`announceChangelog` never reads it and `entries` is bit-identical,
-`slice(-5)` for `slice(max(n - 5, 0))`). They ride the next major
-together.
+contract rule above:
+
+- `ContractSurface` lost its `THandler` parameter: only ever
+  instantiated as `unknown` once 6.0.0 deleted the suite factory that
+  bound it.
+- `surfaceError` lost its `message` parameter: every caller ran the
+  default; a non-Error still wraps as `Error(UNHANDLED_MESSAGE, { cause })`.
+- `trySetDocumentLanguage` lost its `onError` sink: every caller omitted
+  it, so the catch is silent by design; the fence stays for the sinks
+  that remain.
+- `ChangelogSelection.omitted` went: `announceChangelog` never read it
+  and `entries` is bit-identical (`slice(-5)` for `slice(max(n - 5, 0))`).
 
 ## Governance files
 

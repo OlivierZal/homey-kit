@@ -24,7 +24,6 @@ describe(selectChangelogEntries, () => {
         { excerpt: 'dix', version: '1.10.0' },
         { excerpt: 'deux', version: '2.0.0' },
       ],
-      omitted: 0,
     })
   })
 
@@ -61,10 +60,7 @@ describe(selectChangelogEntries, () => {
         language: 'fr',
         to: '2.0.0',
       }),
-    ).toStrictEqual({
-      entries: [{ excerpt: 'deux', version: '2.0.0' }],
-      omitted: 0,
-    })
+    ).toStrictEqual({ entries: [{ excerpt: 'deux', version: '2.0.0' }] })
   })
 
   it.each([
@@ -101,7 +97,7 @@ describe(selectChangelogEntries, () => {
   ])('should announce nothing $case', ({ from, to }) => {
     expect(
       selectChangelogEntries({ changelog, from, language: 'en', to }),
-    ).toStrictEqual({ entries: [], omitted: 0 })
+    ).toStrictEqual({ entries: [] })
   })
 
   it('should fall back to English when the language is missing', () => {
@@ -155,8 +151,8 @@ describe(selectChangelogEntries, () => {
     expect(entries).toStrictEqual([{ excerpt: 'two', version: '2.0.0' }])
   })
 
-  it('should keep the five most recent and report the rest as omitted', () => {
-    const { entries, omitted } = selectChangelogEntries({
+  it('should keep the five most recent and drop the older ones', () => {
+    const { entries } = selectChangelogEntries({
       changelog: Object.fromEntries(
         Array.from({ length: 7 }, (_value, index) => [
           `1.${String(index)}.0`,
@@ -175,6 +171,5 @@ describe(selectChangelogEntries, () => {
       '1.5.0',
       '1.6.0',
     ])
-    expect(omitted).toBe(1)
   })
 })
