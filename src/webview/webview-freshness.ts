@@ -106,19 +106,11 @@ const joinStamps = (): string | null => {
 // the address is deterministic per identity, and an unguarded attempt
 // re-served from the cache would boot-navigate forever. Skipping (and
 // saying so) is the safe side of that trade.
-const DENIED = Symbol('denied')
-
-const readStoredGuard = (): string | symbol | null => {
-  try {
-    return sessionStorage.getItem(REFETCH_GUARD_KEY)
-  } catch {
-    return DENIED
-  }
-}
-
 const readRefetchGuard = (hash: string): 'armed' | 'denied' | 'spent' => {
-  const stored = readStoredGuard()
-  if (stored === DENIED) {
+  let stored: string | null
+  try {
+    stored = sessionStorage.getItem(REFETCH_GUARD_KEY)
+  } catch {
     return 'denied'
   }
   return stored === hash ? 'spent' : 'armed'
@@ -271,10 +263,7 @@ const createRunner = ({
   entry,
   fetchHashes,
   report,
-}: WatchWebviewFreshnessOptions): {
-  reportOnce: (message: string) => void
-  run: () => Promise<boolean>
-} => {
+}: WatchWebviewFreshnessOptions): (() => Promise<boolean>) => {
   let isSpent = false
   let previous: string | undefined
   const reportOnce = (message: string): void => {
@@ -291,12 +280,8 @@ const createRunner = ({
     }
     return isRefetching
   }
-  return {
-    reportOnce,
-    run: async (): Promise<boolean> =>
-      !isSpent &&
-      spend(await ensureFreshWebview(entry, fetchHashes, reportOnce)),
-  }
+  return async (): Promise<boolean> =>
+    !isSpent && spend(await ensureFreshWebview(entry, fetchHashes, reportOnce))
 }
 
 // The whole guarantee rests on the BOOT check: a new document checks
@@ -349,7 +334,7 @@ const whenVisible = (recheck: () => void): void => {
 export const watchWebviewFreshness = async (
   options: WatchWebviewFreshnessOptions,
 ): Promise<boolean> => {
-  const { run } = createRunner(options)
+  const run = createRunner(options)
   // Started, not awaited: `run` cannot reject — every path it reaches is
   // fenced — so the trigger only has to detach it, and holding the last
   // one keeps that detachment explicit rather than floating.
