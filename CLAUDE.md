@@ -114,6 +114,13 @@ under `createInput`, `stampHtml`/`stampReferences` under
 `announceChangelog`. The orchestrator is the documented path; the
 primitive stays public for a consumer that owns the orchestration. Do
 not remove a primitive because only the orchestrator calls it today.
+The same test kept `createInput`'s `min`/`max` (verified 2026-10-14):
+they are the platform's own number-input attributes, and they entered
+with a live consumer (com.melcloud's temperature input, until its
+widget turned the setpoint into a generated select two days later) —
+an idle convenience over a platform shape is not speculative
+generality, and dropping it would be a major on `./dom` for two
+optional properties.
 
 The 5.2.0 root helpers entered on the first bar — `announceChangelog`
 and `logSettingsRoute` were verbatim in three apps, `createSettingManager`
@@ -306,6 +313,19 @@ fenced FIRST for that reason.
   manifest carries no numeric dropdown id, counted 2026-09-07). The
   constraint lives on the consumer's manifest; the kit states it beside
   the reader and the README carries the pointer.
+
+**Parked for 8.0.0 (verified 2026-10-14)** — four narrowings, each
+behaviour-neutral for every installed app and each a major by the
+contract rule above: `ContractSurface` loses its `THandler` parameter
+(only ever instantiated as `unknown`; the header sentence about apps
+supplying their handler union describes the deleted suite factory);
+`surfaceError` loses its `message` parameter (every caller runs the
+default; the README's settings-page example follows); `trySetDocumentLanguage`
+loses its `onError` sink (every caller omits it; the blanket fence
+stays for the sinks that remain); `ChangelogSelection.omitted` goes
+(`announceChangelog` never reads it and `entries` is bit-identical,
+`slice(-5)` for `slice(max(n - 5, 0))`). They ride the next major
+together.
 
 ## Governance files
 
