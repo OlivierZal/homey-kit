@@ -71,7 +71,7 @@ describe(settleDetached, () => {
     // microtask turns and no macrotask, so the claims below hold as they
     // did for a hand-rolled loop.
     const detached = sequential(
-      Array.from({ length: LENGTH }, (_unused, step) => step),
+      Array.from({ length: LENGTH }, (_value, step) => step),
       async (step) => {
         await Promise.resolve()
         steps.push(step)
