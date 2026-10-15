@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { sequential } from '../../src/sequential.ts'
 import {
   assertDefined,
   getMockCallArg,
@@ -66,13 +67,16 @@ describe(settleDetached, () => {
     // would resolve mid-chain; only a macrotask turn settles it whole.
     const LENGTH = 50
     const steps: number[] = []
-    const detached = (async (): Promise<void> => {
-      for (let step = 0; step < LENGTH; step += 1) {
-        // eslint-disable-next-line no-await-in-loop -- the chain is the point: each step is one microtask turn
+    // The kit's own sequential seam builds the chain: each step is a few
+    // microtask turns and no macrotask, so the claims below hold as they
+    // did for a hand-rolled loop.
+    const detached = sequential(
+      Array.from({ length: LENGTH }, (_unused, step) => step),
+      async (step) => {
         await Promise.resolve()
         steps.push(step)
-      }
-    })()
+      },
+    )
 
     await settleDetached()
 
