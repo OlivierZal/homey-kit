@@ -142,6 +142,11 @@ every consumer already holds as a devDependency (`./testing` →
 alias), and a missing one fails loudly at its own call site, in a dev
 context, which is the right place to learn it.
 
+The one twin this rule costs is `src/fire-and-forget.ts`: api-core
+carries the same twelve lines (and this `Logger` seam) because the kit
+declares no dependency and the SDK core will not depend on a Homey kit.
+Deliberate, verified 2026-10-15; the two files change together.
+
 The bare `homey-apps-sdk-v3-types` devDependency beside the
 `@types/homey` alias is NOT a leftover of the dropped peer, and the two
 lines move together on every SDK-types bump. The alias is what lets
