@@ -7,9 +7,11 @@
  * translation, and fold several devices' stored values into the single
  * value a grouped control shows.
  *
- * The manifest types here describe only what is read, so an app's own
- * richer manifest type stays assignable: naming no SDK type is what
- * keeps this package free of dependencies and peers.
+ * The manifest types here describe only what is read, in the shapes
+ * Homey's manifest schema gives them, so the SDK's own `DriverManifest`
+ * passes straight through (`tests/types/manifest-inputs.ts` pins it) and
+ * so does any richer app type: naming no SDK type is what keeps this
+ * package free of dependencies and peers.
  * @packageDocumentation
  */
 
@@ -45,7 +47,7 @@ export interface DriverSetting {
   /**
    * The group's label, in the requested language.
    */
-  readonly groupLabel?: string
+  readonly groupLabel?: string | undefined
   /**
    * The highest value a numeric control accepts.
    */
@@ -59,7 +61,7 @@ export interface DriverSetting {
    */
   readonly placeholder?: string
   /**
-   * The unit shown beside a numeric control.
+   * The unit shown beside a numeric control, in the requested language.
    */
   readonly units?: string | undefined
   /**
@@ -84,11 +86,12 @@ export interface DriverSettingValue {
 }
 
 /**
- * Strings by language tag. English is required: it is the fallback every
- * lookup lands on when a language is missing.
+ * Strings by language tag, as a validated manifest carries them: English
+ * is required, since it is the fallback every lookup lands on when a
+ * language is missing.
  * @category Manifest
  */
-export interface LocalizedStrings extends Partial<Record<string, string>> {
+export interface LocalizedStrings extends Readonly<Record<string, string>> {
   /**
    * The English string, always present.
    */
@@ -105,9 +108,11 @@ export interface LoginSetting extends PairSetting {
    */
   readonly id: 'login'
   /**
-   * The form's labels and placeholders, keyed by field.
+   * The step's options: the form's labels and placeholders keyed by
+   * field (`usernameLabel`, `passwordPlaceholder`), beside options that
+   * are not text (`logo`), all typed by the SDK as unknown values.
    */
-  readonly options: Readonly<Record<string, string | LocalizedStrings>>
+  readonly options: Readonly<Record<string, unknown>>
 }
 
 /**
@@ -120,40 +125,28 @@ export interface ManifestDriver {
    */
   readonly id: string
   /**
-   * The driver's display name: localized strings, or the plain string the
-   * manifest admits just as well (com.heatzy ships the plain form) — a
-   * localized value is served in the caller's language, a plain string as
-   * is.
+   * The driver's display name, plain or keyed by language (com.heatzy
+   * ships the plain form): a keyed value is served in the caller's
+   * language, a plain string as is.
    */
-  readonly name: string | LocalizedStrings
+  readonly name: ManifestString
   /**
    * The pairing steps, one of which may be the login form.
    */
   readonly pair?: readonly (LoginSetting | PairSetting)[]
   /**
-   * The setting groups the driver declares.
+   * The settings the driver declares: controls, and groups of them.
    */
   readonly settings?: readonly ManifestDriverSetting[]
 }
 
 /**
- * A group of settings as the manifest nests them.
+ * A setting as the manifest declares it: a control, or a group of
+ * settings.
  * @category Manifest
  */
-export interface ManifestDriverSetting {
-  /**
-   * The group's localized label.
-   */
-  readonly label: LocalizedStrings
-  /**
-   * The controls the group holds.
-   */
-  readonly children?: readonly ManifestDriverSettingData[]
-  /**
-   * The group id, absent on an ungrouped declaration.
-   */
-  readonly id?: string
-}
+export type ManifestDriverSetting =
+  ManifestDriverSettingData | ManifestDriverSettingGroup
 
 /**
  * One control as the manifest declares it.
@@ -161,13 +154,13 @@ export interface ManifestDriverSetting {
  */
 export interface ManifestDriverSettingData {
   /**
-   * The setting id.
+   * The setting id; the manifest admits a number.
    */
-  readonly id: string
+  readonly id: number | string
   /**
-   * The control's localized label.
+   * The control's label, plain or keyed by language.
    */
-  readonly label: LocalizedStrings
+  readonly label: ManifestString
   /**
    * The control kind.
    */
@@ -181,17 +174,46 @@ export interface ManifestDriverSettingData {
    */
   readonly min?: number
   /**
-   * The unit shown beside a numeric control.
+   * The unit shown beside a numeric control, plain or keyed by language.
    */
-  readonly units?: string
+  readonly units?: ManifestString
   /**
    * The choices a select control offers.
    */
   readonly values?: readonly {
     readonly id: string
-    readonly label: LocalizedStrings
+    readonly label: ManifestString
   }[]
 }
+
+/**
+ * A group of settings as the manifest nests them: a group is what holds
+ * `children`, and it may nest groups.
+ * @category Manifest
+ */
+export interface ManifestDriverSettingGroup {
+  /**
+   * The settings the group holds: controls, and nested groups.
+   */
+  readonly children: readonly ManifestDriverSetting[]
+  /**
+   * The group's label, plain or keyed by language.
+   */
+  readonly label: ManifestString
+  /**
+   * The group id, which the manifest schema does not require.
+   */
+  readonly id?: string
+}
+
+/**
+ * A string as the manifest states it: plain, or keyed by language tag.
+ * Homey's manifest schema requires `en` in the keyed form, but the SDK's
+ * generated type does not carry that requirement, so this input shape
+ * does not either; `localize` enforces it.
+ * @category Manifest
+ */
+export type ManifestString = string | Readonly<Record<string, string>>
 
 /**
  * A pairing step, identified only.
@@ -209,6 +231,8 @@ export interface PairSetting {
 // folding those keys onto the field each names.
 const LOGIN_GROUP_ID = 'login'
 
+const LABEL_SUFFIX = 'Label'
+
 const PASSWORD_PREFIX = 'password'
 
 const PLACEHOLDER_SUFFIX = 'Placeholder'
@@ -220,23 +244,96 @@ const isLoginSetting = (setting: PairSetting): setting is LoginSetting =>
  * Picks a localized string, falling back to English.
  *
  * A plain string passes through: the manifest allows either form.
- * @param strings - The localized strings, or an already-plain string.
+ * @param strings - The string, plain or keyed by language tag.
  * @param language - The language tag to prefer.
  * @returns The string in that language, or its English form.
+ * @throws If a keyed string has no English value: Homey's manifest schema
+ * requires `en` (`i18nObject`), so a validated manifest always carries it
+ * and a miss is a contract break — loud, never a blank label.
  * @category Manifest
  */
-export const localize = (
-  strings: string | LocalizedStrings,
-  language: string,
-): string =>
-  typeof strings === 'string' ? strings : (strings[language] ?? strings.en)
+export const localize = (strings: ManifestString, language: string): string => {
+  if (typeof strings === 'string') {
+    return strings
+  }
+  const localized = strings[language] ?? strings.en
+  if (localized === undefined) {
+    throw new Error('Localized manifest string without an English value')
+  }
+  return localized
+}
+
+// A keyed string is a plain record of strings: an array of strings is a
+// list, not a translation, and would reach `localize` without an `en`.
+const isManifestString = (value: unknown): value is ManifestString =>
+  typeof value === 'string' ||
+  (typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((entry) => typeof entry === 'string'))
+
+// The form's text is the label and placeholder entries: the step also
+// carries options that are not text (`logo`, a file path), and the SDK
+// types every value as unknown, so both the key and the value select.
+const isFormText = (
+  entry: [string, unknown],
+): entry is [string, ManifestString] =>
+  (entry[0].endsWith(LABEL_SUFFIX) || entry[0].endsWith(PLACEHOLDER_SUFFIX)) &&
+  isManifestString(entry[1])
+
+interface SettingContext {
+  readonly driverId: string
+  readonly driverLabel: string
+  readonly language: string
+  readonly group?: { readonly label: string; readonly id?: string | undefined }
+}
+
+const toDriverSetting = (
+  { id, label, max, min, type, units, values }: ManifestDriverSettingData,
+  { driverId, driverLabel, group, language }: SettingContext,
+): DriverSetting => ({
+  driverId,
+  driverLabel,
+  groupId: group?.id,
+  groupLabel: group?.label,
+  id: String(id),
+  max,
+  min,
+  title: localize(label, language),
+  type,
+  units: units === undefined ? undefined : localize(units, language),
+  values: values?.map(({ id: valueId, label: valueLabel }) => ({
+    id: valueId,
+    label: localize(valueLabel, language),
+  })),
+})
+
+// A control carries the innermost group it sits in, which is the one the
+// page regroups it under.
+const flattenSettings = (
+  settings: readonly ManifestDriverSetting[],
+  context: SettingContext,
+): DriverSetting[] =>
+  settings.flatMap((setting) =>
+    'children' in setting
+      ? flattenSettings(setting.children, {
+          ...context,
+          group: {
+            id: setting.id,
+            label: localize(setting.label, context.language),
+          },
+        })
+      : [toDriverSetting(setting, context)],
+  )
 
 /**
  * Builds the login form's controls out of a driver's pairing step.
  *
  * The manifest states the form as label and placeholder keys; each is
  * folded onto the field it names, so one username control and one
- * password control come out however many keys were declared. A driver
+ * password control come out however many keys were declared. An option
+ * that is neither (`logo`), or whose value is not a string, plain or
+ * keyed by language, is not the form's text and is skipped. A driver
  * that pairs without a login form yields nothing.
  * @param driver - The driver whose pairing steps are read.
  * @param language - The language tag to prefer.
@@ -250,8 +347,10 @@ export const getDriverLoginSetting = (
   const { id: driverId, name, pair } = driver
   const driverLabel = localize(name, language)
   const driverLoginSetting: Record<string, DriverSetting> = {}
-  const loginOptions = pair?.find(isLoginSetting)?.options ?? {}
-  for (const [option, label] of Object.entries(loginOptions)) {
+  const formText = Object.entries(
+    pair?.find(isLoginSetting)?.options ?? {},
+  ).filter(isFormText)
+  for (const [option, text] of formText) {
     const isPassword = option.startsWith(PASSWORD_PREFIX)
     const key = isPassword ? 'password' : 'username'
     driverLoginSetting[key] ??= {
@@ -265,7 +364,7 @@ export const getDriverLoginSetting = (
     driverLoginSetting[key] = {
       ...driverLoginSetting[key],
       [option.endsWith(PLACEHOLDER_SUFFIX) ? 'placeholder' : 'title']: localize(
-        label,
+        text,
         language,
       ),
     }
@@ -276,9 +375,10 @@ export const getDriverLoginSetting = (
 /**
  * Flattens a driver's declared settings into renderable controls.
  *
- * The manifest nests controls inside groups; the page wants them flat,
- * each carrying the group it came from so it can be regrouped for
- * display. A group without children contributes nothing.
+ * The manifest nests controls inside groups, which may nest groups; the
+ * page wants them flat, each carrying the innermost group it came from
+ * so it can be regrouped for display. A control declared outside any
+ * group carries none, and a group without children contributes nothing.
  * @param driver - The driver whose settings are read.
  * @param language - The language tag to prefer.
  * @returns One entry per declared control, groups flattened.
@@ -289,26 +389,11 @@ export const getDriverSettings = (
   language: string,
 ): DriverSetting[] => {
   const { id: driverId, name, settings } = driver
-  const driverLabel = localize(name, language)
-  return (settings ?? []).flatMap(
-    ({ children, id: groupId, label: groupLabel }) =>
-      (children ?? []).map(({ id, label, max, min, type, units, values }) => ({
-        driverId,
-        driverLabel,
-        groupId,
-        groupLabel: localize(groupLabel, language),
-        id,
-        max,
-        min,
-        title: localize(label, language),
-        type,
-        units,
-        values: values?.map(({ id: valueId, label: valueLabel }) => ({
-          id: valueId,
-          label: localize(valueLabel, language),
-        })),
-      })),
-  )
+  return flattenSettings(settings ?? [], {
+    driverId,
+    driverLabel: localize(name, language),
+    language,
+  })
 }
 
 /**

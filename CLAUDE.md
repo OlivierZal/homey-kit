@@ -160,6 +160,24 @@ true`, so the two settings tests' `import type … from
 nothing else — typecheck, tests and build all still pass, which is why
 it reads as dead to a grep).
 
+**SDK types 1.8.3 (9.0.0, 2026-11-04).** The 1.x types are generated
+from the SDK itself, and two things follow for the kit. `homey` now
+exports `Homey` as the SDK class by name, and the one augmentation seam
+is `HomeyTypes` (`app` only): the 0.3.x `declare module 'homey' {
+interface Homey extends HomeyLib { … } }` block names the class as its
+own base (TS2310) and collides on every member it re-types (TS2717) —
+errors that a `.d.ts` under `skipLibCheck`, which is every app's override
+file, never reports, so the block dies in silence and narrows nothing
+(measured 2026-11-04 against 1.8.3, both ways). Managers are narrowed
+app-side (README, "Typing the Homey instance"); carrying
+`drivers`/`settings` through `HomeyTypes` is asked of Athom (point 7 of
+the 1.7.0 verdict, still open). And `./manifest`'s inputs accept the
+SDK's `DriverManifest` structurally: `tests/types/manifest-inputs.ts`
+pins it both ways (the SDK type fits, the kit type stays the wider one),
+so a kit field typed narrower than the schema fails typecheck HERE,
+never at an app's adoption. The lock carries `homey-lib` (2.53.0 at
+adoption) as the types' transitive, not as anything the kit imports.
+
 `./testing` therefore rides to the device unused, and that is ACCEPTED —
 re-measured 2026-09-06, after #72 hoisted the helpers and the floor
 kernel into it: `dist/testing` is 48 KB apparent (104 KB in 4 KB
@@ -285,6 +303,25 @@ fenced FIRST for that reason.
   its own settings type. A default nothing reaches is the kind of branch
   the 100 % bar rejects (see `parseFormValue` below for the one such
   branch the contract keeps until the next major).
+- `./manifest` reads the platform's shapes, stated structurally and only
+  as far as it reads them (9.0.0): a group is what holds `children` —
+  required by Homey's schema, so the type-less, children-less group the
+  8.x type admitted is gone (every group across the apps' compose
+  sources carries `type: "group"` and children, 53 counted 2026-11-04);
+  groups nest and a control carries the innermost one; a control may sit
+  outside any group (8.x read only groups' children and would have
+  dropped one silently — neither app declares one: their top-level
+  entries are `$extends` of group templates); a setting `id` may be a
+  number, served as a string; `name`/`label`/`units` are plain or keyed
+  by language; a login step's `options` are `unknown` values, of which
+  only the `*Label`/`*Placeholder` entries holding a string, plain or
+  keyed, are the form's — `logo`, a file path, sits beside them in both
+  apps' real manifests, and selecting by value type alone would fold it
+  onto the username title whenever it is listed after the label.
+  `localize` THROWS on a keyed string without `en`: the schema requires
+  it (`i18nObject`), so a validated manifest always carries it and a
+  miss is a contract break that stays loud, never a silent `''` (owner's
+  decision, 2026-11-04).
 - `announceChangelog` takes the Homey instance as its scheduler (its
   `setTimeout` is `this`-bound and disposed at uninit — never hand it a
   bare `setTimeout`), owns the `notifiedVersion` key and the ten-second
@@ -333,6 +370,29 @@ contract rule above:
   that remain.
 - `ChangelogSelection.omitted` went: `announceChangelog` never read it
   and `entries` is bit-identical (`slice(-5)` for `slice(max(n - 5, 0))`).
+
+**Shipped in 9.0.0 (2026-11-04)** — SDK types 1.8.3 on both entries
+(alias and bare name), and `./manifest` inputs that accept the SDK's
+shapes, which is what lets the apps drop their hand-written manifest
+types. Breaking by the contract rule, behaviour-neutral for every
+installed app:
+
+- `ManifestDriverSetting` is a union of `ManifestDriverSettingData` and
+  `ManifestDriverSettingGroup`; a consumer narrowing on `.children`
+  discriminates first (`'children' in setting`) — com.heatzy's
+  device-settings-contract test is the one measured break, two lines.
+  A group's `children` is required and the type-less group form is gone.
+- `LoginSetting.options` values widen to `unknown`; the kit selects the
+  form's entries by key and value.
+- `LocalizedStrings` index values narrow from `string | undefined` to
+  `string`, as the schema states them; a consumer's `?? strings.en`
+  fallback over an index read becomes dead code (com.melcloud's
+  `localizeWithAffix` drops one).
+- `localize` takes `ManifestString` and throws on a keyed string without
+  `en`.
+- `ManifestDriverSettingData.id` admits a number (served as a string);
+  `units` is plain or keyed and is localized; `name`, `label` and
+  `values[].label` take `ManifestString`.
 
 ## Governance files
 
