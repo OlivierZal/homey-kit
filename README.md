@@ -40,7 +40,7 @@ range.
 | `@olivierzal/homey-kit/widget`   | The promise-native widget SDK typed: `homeyApiGet`/`Post`/`Put` — and `watchWidgetFreshness`, the widget's whole freshness handshake in one call                                                                                                                                      |
 | `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                                                              |
 | `@olivierzal/homey-kit/node`     | The two node-side halves of the freshness handshake: `stampPackagedPages` (+ `stampHtml`, `stampReferences`), the package-time `?v=` stamper that emits `webview-hashes.json`, and `getWebviewHashes`, the runtime reader the route serves                                            |
-| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — generics for the app's `homey` augmentation                                                                                                                                                                                           |
+| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — the member signatures an app's typed `Homey` interface narrows the SDK managers with                                                                                                                                                  |
 | `@olivierzal/homey-kit/testing`  | The analysis seams (`findContractBreach`, `analyzeRouteGuards`) and the plain helpers every suite shares (`assertDefined`, `getMockCallArg`, `mock`, `settleDetached`, `InteropModule`) — needs vitest                                                                                |
 
 ## The DOM subpath
@@ -127,15 +127,28 @@ import {
 } from '@olivierzal/homey-kit/manifest'
 
 const language = this.homey.i18n.getLanguage()
-const settings = this.homey.manifest.drivers.flatMap((driver) => [
+const settings = (this.homey.manifest.drivers ?? []).flatMap((driver) => [
   ...getDriverSettings(driver, language),
   ...getDriverLoginSetting(driver, language),
 ])
 ```
 
-The manifest types here describe only the fields that are read, so an
-app's own richer manifest type stays assignable — which is what lets this
-subpath name no SDK type, and the package keep no peers.
+The manifest types here describe only the fields that are read, in the
+shapes Homey's manifest schema gives them, so the SDK's own
+`DriverManifest` — what `this.homey.manifest.drivers` holds since the SDK
+types 1.x — passes straight through, and so does any richer app type;
+`tests/types/manifest-inputs.ts` pins the assignability. Naming no SDK
+type is what lets the package keep no peers. The shapes are the schema's:
+a group is what holds `children` (groups nest, and a control carries the
+innermost one), a control may sit outside any group, a setting `id` may
+be a number (served as a string), `name`, `label` and `units` are plain
+or keyed by language, and a login step's `options` are untyped values of
+which only the `*Label`/`*Placeholder` entries holding a string, plain or
+keyed, become controls (`logo`, a file path, sits beside them).
+
+`localize` throws on a keyed string without `en`: the schema requires it,
+so a validated manifest always carries it and a miss is a contract break
+in the manifest — loud, never a blank label.
 
 `mergeDeviceSettings` folds several devices' stored values into the one
 value a grouped control shows: a setting they disagree on collapses to
@@ -152,44 +165,83 @@ consumer already has as a devDependency, and a missing one fails
 loudly at its own call site. The full reasoning and the incident
 behind it live in `CLAUDE.md`.
 
-## Wiring the type augmentations
+## Typing the Homey instance
 
-Module augmentation cannot ship in a package; each app keeps a local
-`homey-override.d.ts`. Extend the SDK interfaces and take the narrowed
-member SIGNATURES from the generics — do not extend the generics
-directly:
+Since the SDK types 1.x, `homey` exports the `Homey` class by name
+(`import type { Homey } from 'homey'` is a legal import) and offers one
+augmentation seam, `HomeyTypes`, which types `homey.app`. Module
+augmentation cannot ship in a package, so each app keeps a local
+override file — seven lines:
 
-```ts title="homey-override"
-import type HomeyLib from 'homey/lib/Homey.js'
-
-import type {
-  TypedManagerDrivers,
-  TypedManagerSettings,
-} from '@olivierzal/homey-kit/types'
+```ts title="homey-override.d.ts"
 import type MyApp from './app.mts'
-import type { HomeySettings, MyDriver } from './types.mts'
 
 declare module 'homey' {
-  interface Homey extends HomeyLib {
+  interface HomeyTypes {
     app: MyApp
-  }
-  interface ManagerDrivers extends HomeyLib.ManagerDrivers {
-    getDrivers: TypedManagerDrivers<MyDriver>['getDrivers']
-  }
-  interface ManagerSettings extends HomeyLib.ManagerSettings {
-    get: TypedManagerSettings<HomeySettings>['get']
-    set: TypedManagerSettings<HomeySettings>['set']
-    unset: TypedManagerSettings<HomeySettings>['unset']
   }
 }
 ```
 
+The 0.3.x block — `declare module 'homey' { interface Homey extends
+HomeyLib { … } }` — is no longer a seam. `Homey` is now the SDK class
+itself, so that interface names the class as its own base (TS2310) and
+every member it re-types collides with the class's own declaration
+(TS2717); inside a `.d.ts` under `skipLibCheck`, which is every app's
+override file, those errors are not even reported, and nothing in the
+block narrows anything (measured 2026-11-04 against 1.8.3). Delete it.
+
+`HomeyTypes` carries `app` only — narrowing `drivers` and `settings`
+through it is asked of Athom (point 7 of the family's 1.7.0 verdict,
+still open). Until then the narrowed managers live in an app-level
+interface that extends the SDK class and takes its member SIGNATURES
+from the generics here; the SDK's manager classes supply everything
+else:
+
+```ts title="types/homey.mts"
+import type {
+  TypedManagerDrivers,
+  TypedManagerSettings,
+} from '@olivierzal/homey-kit/types'
+import type { Homey } from 'homey'
+import type SdkManagerDrivers from 'homey/manager/drivers.js'
+import type SdkManagerSettings from 'homey/manager/settings.js'
+
+import type MyDriver from '../drivers/my-driver/driver.mts'
+import type { HomeySettings } from './app-settings.mts'
+
+export interface ManagerDrivers extends SdkManagerDrivers {
+  readonly getDrivers: TypedManagerDrivers<MyDriver>['getDrivers']
+}
+
+export interface ManagerSettings extends SdkManagerSettings {
+  readonly get: TypedManagerSettings<HomeySettings>['get']
+  readonly set: TypedManagerSettings<HomeySettings>['set']
+  readonly unset: TypedManagerSettings<HomeySettings>['unset']
+}
+
+export interface MyHomey extends Homey {
+  readonly drivers: ManagerDrivers
+  readonly settings: ManagerSettings
+}
+```
+
+```ts title="app"
+export default class MyApp extends App {
+  declare public readonly homey: MyHomey
+}
+```
+
+Only the app class re-declares `homey`: a driver or a device already
+sees the app typed through `this.homey.app` — that is what `HomeyTypes`
+does — and reaches the typed managers through it.
+
 `interface ManagerDrivers extends TypedManagerDrivers<MyDriver> {}` is a
-trap, measured on two apps: without `HomeyLib.ManagerDrivers` the
-interface loses `log`, `error`, `getDriver` and 14 more members; adding
-both parents makes each declare `getDrivers`, and TypeScript resolves
-the conflict **silently** towards the SDK's wide type — `getDrivers()`
-hands back `Device[]` where the app expects `MyDriver[]`, with no error
+trap, measured on two apps: without the SDK class as its base the
+interface loses `getDriver`, `log`, `error` and the rest; adding both
+parents makes each declare `getDrivers`, and TypeScript resolves the
+conflict **silently** towards the SDK's wide type — `getDrivers()` hands
+back `Driver`s where the app expects `MyDriver`s, with no error
 anywhere. Picking the members keeps one declaration site per member, so
 a future divergence is a compile error rather than a silent widening.
 
@@ -213,8 +265,8 @@ The adapter itself is the kit's: `createSettingManager` turns the typed
 persists its session through, coercing a non-string read to "absent"
 the way the library expects. The mapper is the app's — a prefix, or the
 bare narrowing above — and there is no identity default, because a
-store keyed by `string` would be exactly the escape hatch the
-augmentation refuses:
+store keyed by `string` would be exactly the escape hatch the typed
+`ManagerSettings` refuses:
 
 ```ts title="app"
 import { createSettingManager } from '@olivierzal/homey-kit'

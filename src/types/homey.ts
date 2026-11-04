@@ -1,8 +1,11 @@
 /**
- * The generic halves of the per-app `homey-override.d.ts` augmentations:
- * each app declares `module 'homey'` itself (module augmentation cannot
- * be packaged) and extends these interfaces with its own types — about
- * six wiring lines per app, shown in the README.
+ * The generic halves of an app's typed `Homey`. Since the SDK types 1.x
+ * the one augmentation seam is `declare module 'homey' { interface
+ * HomeyTypes { app: MyApp } }`, which types `homey.app` and nothing
+ * else; the managers are narrowed app-side, by interfaces that extend
+ * the SDK's manager classes and take their member SIGNATURES from these
+ * generics, gathered into an app-level `interface MyHomey extends Homey`
+ * that the app class re-declares `homey` with — shown in the README.
  * @packageDocumentation
  */
 

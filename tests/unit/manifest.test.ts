@@ -58,6 +58,14 @@ describe(localize, () => {
   it('should pass a plain string through', () => {
     expect(localize('user@example.com', 'fr')).toBe('user@example.com')
   })
+
+  // Homey's schema requires `en` on a keyed string; the SDK's generated
+  // type does not carry the requirement, so the miss has to stay loud here.
+  it('should throw on a keyed string without an English value', () => {
+    expect(() => localize({ fr: 'Nom' }, 'da')).toThrow(
+      'Localized manifest string without an English value',
+    )
+  })
 })
 
 describe(getDriverSettings, () => {
@@ -135,14 +143,14 @@ describe(getDriverSettings, () => {
         {
           id: 'plug',
           name: { en: 'Plug' },
-          settings: [{ id: 'general', label: { en: 'General' } }],
+          settings: [{ children: [], id: 'general', label: { en: 'General' } }],
         },
         'en',
       ),
     ).toStrictEqual([])
   })
 
-  it('should keep an ungrouped declaration without a group id', () => {
+  it('should serve a group without an id by its label alone', () => {
     expect(
       getDriverSettings(
         {
@@ -160,6 +168,110 @@ describe(getDriverSettings, () => {
         'en',
       )[0],
     ).toMatchObject({ groupId: undefined, groupLabel: 'General' })
+  })
+
+  // Groups nest; the page regroups a control under the innermost one.
+  it('should flatten a nested group onto its innermost group', () => {
+    expect(
+      getDriverSettings(
+        {
+          id: 'plug',
+          name: { en: 'Plug' },
+          settings: [
+            {
+              children: [
+                {
+                  id: 'outer_only',
+                  label: { en: 'Outer only' },
+                  type: 'checkbox',
+                },
+                {
+                  children: [
+                    { id: 'nested', label: { en: 'Nested' }, type: 'checkbox' },
+                  ],
+                  id: 'inner',
+                  label: { en: 'Inner', fr: 'Interne' },
+                },
+              ],
+              id: 'outer',
+              label: { en: 'Outer' },
+            },
+          ],
+        },
+        'fr',
+      ),
+    ).toMatchObject([
+      { groupId: 'outer', groupLabel: 'Outer', id: 'outer_only' },
+      { groupId: 'inner', groupLabel: 'Interne', id: 'nested' },
+    ])
+  })
+
+  // The schema lets a control sit outside any group; 8.x read only the
+  // groups' children and dropped such a control without a trace.
+  it('should serve a control declared outside any group, with no group', () => {
+    expect(
+      getDriverSettings(
+        {
+          id: 'plug',
+          name: { en: 'Plug' },
+          settings: [{ id: 'lock', label: { en: 'Lock' }, type: 'checkbox' }],
+        },
+        'en',
+      ),
+    ).toStrictEqual([
+      {
+        driverId: 'plug',
+        driverLabel: 'Plug',
+        groupId: undefined,
+        groupLabel: undefined,
+        id: 'lock',
+        max: undefined,
+        min: undefined,
+        title: 'Lock',
+        type: 'checkbox',
+        units: undefined,
+        values: undefined,
+      },
+    ])
+  })
+
+  it('should serve a numeric setting id as a string', () => {
+    expect(
+      getDriverSettings(
+        {
+          id: 'plug',
+          name: { en: 'Plug' },
+          settings: [
+            {
+              children: [{ id: 7, label: { en: 'Seventh' }, type: 'checkbox' }],
+              id: 'general',
+              label: { en: 'General' },
+            },
+          ],
+        },
+        'en',
+      ),
+    ).toMatchObject([{ groupId: 'general', id: '7' }])
+  })
+
+  it('should localize a unit keyed by language', () => {
+    expect(
+      getDriverSettings(
+        {
+          id: 'plug',
+          name: { en: 'Plug' },
+          settings: [
+            {
+              id: 'delay',
+              label: { en: 'Delay' },
+              type: 'number',
+              units: { en: 'minutes', fr: 'minutes FR' },
+            },
+          ],
+        },
+        'fr',
+      ),
+    ).toMatchObject([{ units: 'minutes FR' }])
   })
 })
 
@@ -215,6 +327,71 @@ describe(getDriverLoginSetting, () => {
         'en',
       ),
     ).toStrictEqual([])
+  })
+
+  // Both apps' login steps list `logo` beside the labels: a string, but
+  // not the form's text — read by value alone it would become a username
+  // control titled after a file.
+  it('should ignore an option that is neither a label nor a placeholder', () => {
+    expect(
+      getDriverLoginSetting(
+        {
+          id: 'plug',
+          name: { en: 'Plug' },
+          pair: [
+            {
+              id: 'login',
+              options: { logo: 'logo.png', passwordLabel: { en: 'Password' } },
+            },
+          ],
+        },
+        'en',
+      ),
+    ).toStrictEqual([
+      {
+        driverId: 'plug',
+        driverLabel: 'Plug',
+        groupId: 'login',
+        id: 'password',
+        title: 'Password',
+        type: 'password',
+      },
+    ])
+  })
+
+  // The SDK types a step's options as unknown values: one that is not a
+  // string, plain or keyed by language, is no text the form can show.
+  it('should skip a label or placeholder whose value is not a string, plain or keyed', () => {
+    expect(
+      getDriverLoginSetting(
+        {
+          id: 'plug',
+          name: { en: 'Plug' },
+          pair: [
+            {
+              id: 'login',
+              options: {
+                passwordLabel: { en: 'Password', hidden: false },
+                passwordPlaceholder: null,
+                usernameLabel: 42,
+                usernamePlaceholder: { en: 'user@example.com' },
+              },
+            },
+          ],
+        },
+        'en',
+      ),
+    ).toStrictEqual([
+      {
+        driverId: 'plug',
+        driverLabel: 'Plug',
+        groupId: 'login',
+        id: 'username',
+        placeholder: 'user@example.com',
+        title: '',
+        type: 'text',
+      },
+    ])
   })
 })
 
