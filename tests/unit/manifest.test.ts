@@ -359,6 +359,39 @@ describe(getDriverLoginSetting, () => {
     ])
   })
 
+  // An array of strings is a list, not a keyed string: read as one, it
+  // would reach `localize` without an `en` and throw instead of being
+  // skipped like the other non-text options.
+  it('should skip a label whose value is an array of strings', () => {
+    expect(
+      getDriverLoginSetting(
+        {
+          id: 'plug',
+          name: { en: 'Plug' },
+          pair: [
+            {
+              id: 'login',
+              options: {
+                passwordLabel: { en: 'Password' },
+                usernameLabel: ['Email', 'Phone'],
+              },
+            },
+          ],
+        },
+        'en',
+      ),
+    ).toStrictEqual([
+      {
+        driverId: 'plug',
+        driverLabel: 'Plug',
+        groupId: 'login',
+        id: 'password',
+        title: 'Password',
+        type: 'password',
+      },
+    ])
+  })
+
   // The SDK types a step's options as unknown values: one that is not a
   // string, plain or keyed by language, is no text the form can show.
   it('should skip a label or placeholder whose value is not a string, plain or keyed', () => {

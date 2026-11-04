@@ -263,10 +263,13 @@ export const localize = (strings: ManifestString, language: string): string => {
   return localized
 }
 
+// A keyed string is a plain record of strings: an array of strings is a
+// list, not a translation, and would reach `localize` without an `en`.
 const isManifestString = (value: unknown): value is ManifestString =>
   typeof value === 'string' ||
   (typeof value === 'object' &&
     value !== null &&
+    !Array.isArray(value) &&
     Object.values(value).every((entry) => typeof entry === 'string'))
 
 // The form's text is the label and placeholder entries: the step also
