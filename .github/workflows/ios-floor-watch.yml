@@ -43,7 +43,8 @@ jobs:
           # `jq -e` fails on null but lets an empty string through; an
           # unread floor must not read as a holding one.
           if [[ -z $minimum ]]; then
-            printf '::error::iTunes Lookup answered without a minimumOsVersion; the floor cannot be verified\n'
+            printf '::error::%s; the floor cannot be verified\n' \
+              'iTunes Lookup answered without a minimumOsVersion'
             exit 1
           fi
 
@@ -56,7 +57,8 @@ jobs:
           # sort -V puts the smaller version first: reached <bar> iff
           # <bar> is not strictly greater than <minimum>.
           reached() {
-            [[ $(printf '%s\n%s\n' "$1" "$minimum" | sort -V | head -1) == "$1" ]]
+            [[ $(printf '%s\n%s\n' "$1" "$minimum" | sort -V | head -1) \
+              == "$1" ]]
           }
 
           if reached 17.4; then
@@ -66,7 +68,8 @@ jobs:
           else
             verdict='es2023 still binds; the derivation needs restating'
           fi
-          title="iOS floor watch: App Store minimum moved to ${minimum} — ${verdict}"
+          title="iOS floor watch: App Store minimum moved to ${minimum}"
+          title="$title — ${verdict}"
 
           # One open report per VALUE: a second run at the same minimum
           # adds nothing a reader does not already have, while a further
@@ -74,16 +77,30 @@ jobs:
           # own.
           existing=$(gh api --paginate --slurp \
             "repos/${REPO}/issues?state=open&per_page=100" \
-            --jq --arg title "$title" '[.[][] | select(.title == $title)] | length')
+            --jq --arg title "$title" \
+            '[.[][] | select(.title == $title)] | length')
           if ((existing > 0)); then
-            printf 'the iOS floor watch issue for %s is already open; not duplicating\n' "$minimum"
+            printf 'the iOS floor watch issue for %s is already open; %s\n' \
+              "$minimum" 'not duplicating'
             exit 0
           fi
 
-          body=$(printf '%s\n\n%s\n\n%s' \
-            "The Homey mobile app's App Store minimum is now **${minimum}** (iTunes Lookup, track id ${track_id}); the webview floor doctrine in \`src/eslint/homey-app.ts\` derives es2023 from **${recorded}**." \
-            "Verdict at this value: ${verdict}." \
-            "Re-derivation is a doctrine change, not a mechanical bump: restate \`webviewFloorBlock\`'s docstring from the new minimum (and, at 17.4, decide the es2024 question for the family), re-derive the \`css/use-baseline\` year and allowlist in the same file, update the recorded value in \`.github/workflows/ios-floor-watch.yml\` in the same pull request, then release and adopt — a policy-crossing release per the adoption doctrine.")
+          # One paragraph per line: GitHub renders a newline in an issue
+          # body as a line break, so the paragraphs are built, not folded.
+          first="The Homey mobile app's App Store minimum is now **${minimum}**"
+          first+=" (iTunes Lookup, track id ${track_id}); the webview floor"
+          first+=" doctrine in \`src/eslint/homey-app.ts\` derives es2023 from"
+          first+=" **${recorded}**."
+          third='Re-derivation is a doctrine change, not a mechanical bump:'
+          third+=" restate \`webviewFloorBlock\`'s docstring from the new"
+          third+=' minimum (and, at 17.4, decide the es2024 question for the'
+          third+=' family), re-derive the `css/use-baseline` year and allowlist'
+          third+=' in the same file, update the recorded value in'
+          third+=' `.github/workflows/ios-floor-watch.yml` in the same pull'
+          third+=' request, then release and adopt — a policy-crossing release'
+          third+=' per the adoption doctrine.'
+          body=$(printf '%s\n\n%s\n\n%s' "$first" \
+            "Verdict at this value: ${verdict}." "$third")
           gh issue create --repo "$REPO" --title "$title" --body "$body"
     timeout-minutes: 10
 name: iOS floor watch
