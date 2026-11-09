@@ -65,7 +65,8 @@ jobs:
           # page with `?v=<8-hex>`; one such reference proves the page
           # went through it, whatever the bundle is called.
           if ! grep -qE '\?v=[0-9a-f]{8}"' ".homeybuild/$STAMPED_PAGE"; then
-            echo "::error::Packaged page is unstamped: .homeybuild/$STAMPED_PAGE"
+            echo "::error::Packaged page is unstamped:" \
+              ".homeybuild/$STAMPED_PAGE"
             exit 1
           fi
       - name: URL
@@ -78,16 +79,21 @@ on:
   workflow_call:
     inputs:
       bundles:
-        description: The packaged bundles the CLI's post-copy build must emit, one path per line, relative to .homeybuild.
+        description: >-
+          The packaged bundles the CLI's post-copy build must emit, one path
+          per line, relative to .homeybuild.
         required: true
         type: string
       stamped-page:
         default: settings/index.html
-        description: The packaged page whose script reference must carry the freshness stamp.
+        description: >-
+          The packaged page whose script reference must carry the freshness
+          stamp.
         required: false
         type: string
     secrets:
       HOMEY_PAT:
-        description: The Homey developer token the publish action authenticates with.
+        description: >-
+          The Homey developer token the publish action authenticates with.
         required: true
 permissions: {}
