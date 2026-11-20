@@ -16,7 +16,8 @@ import { type WidgetApi, homeyApiGet, homeyApiPost } from './promise-api.ts'
  * detached with a silent sink.
  * @param homey - The widget SDK instance.
  * @param entry - The widget's key in the served hash manifest.
- * @returns Whether the boot check issued a refetch — the caller must then skip its own init: the document is about to be replaced.
+ * @returns Whether the boot check issued a refetch — the caller must then skip
+ * its own init: the document is about to be replaced.
  * @category Widget
  */
 export const watchWidgetFreshness = async (

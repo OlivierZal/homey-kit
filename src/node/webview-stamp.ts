@@ -168,8 +168,10 @@ const stampPage = async (htmlPath: string): Promise<PageStamp> => {
  * Stamps one packaged page in place and returns the identity it now
  * carries.
  * @param htmlPath - The packaged page copy.
- * @returns The page identity, or `null` when there is nothing to stamp — no copy, or a copy with no local reference.
- * @throws When the page copy exists but cannot be read — only its absence means "nothing to stamp".
+ * @returns The page identity, or `null` when there is nothing to stamp — no
+ * copy, or a copy with no local reference.
+ * @throws When the page copy exists but cannot be read — only its absence means
+ * "nothing to stamp".
  * @category Node
  */
 export const stampHtml = async (htmlPath: string): Promise<string | null> => {
@@ -216,7 +218,8 @@ const sortStamps = (
  * @param outRoot - The packaging target directory.
  * @param pages - The packaged pages and their manifest keys.
  * @returns Whether the manifest was written.
- * @throws When only some of the page copies exist, or a copy has nothing to stamp.
+ * @throws When only some of the page copies exist, or a copy has nothing to
+ * stamp.
  * @category Node
  */
 export const stampPackagedPages = async (
