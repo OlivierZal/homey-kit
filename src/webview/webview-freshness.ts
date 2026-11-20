@@ -213,9 +213,11 @@ const refetchOnce = (
  * unreachable route, unknown entry, denied storage): a wrong guess must
  * never take a working webview down.
  * @param entry - The page's key in the served hash manifest.
- * @param fetchHashes - Bridge call returning the live hashes; the transport is the caller's.
+ * @param fetchHashes - Bridge call returning the live hashes; the transport is
+ * the caller's.
  * @param report - Optional diagnostics sink receiving each refetch decision.
- * @returns Whether a refetch was issued — the caller must then skip its own init: the document is about to be replaced.
+ * @returns Whether a refetch was issued — the caller must then skip its own
+ * init: the document is about to be replaced.
  * @category Webview
  */
 export const ensureFreshWebview = async (
@@ -328,7 +330,8 @@ const whenVisible = (recheck: () => void): void => {
  * check) ever happens. A refetch stays bounded to one per identity by
  * the handshake's guard, and no trigger fires once one is issued.
  * @param options - The handshake's inputs.
- * @returns Whether the boot check issued a refetch — the caller must then skip its own init: the document is about to be replaced.
+ * @returns Whether the boot check issued a refetch — the caller must then skip
+ * its own init: the document is about to be replaced.
  * @category Webview
  */
 export const watchWebviewFreshness = async (

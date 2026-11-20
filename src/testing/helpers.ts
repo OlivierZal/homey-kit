@@ -40,7 +40,9 @@ export const assertDefined: <T>(value: T | undefined) => asserts value is T = (
   expect(value).toBeDefined()
 }
 
-/* eslint-disable @typescript-eslint/no-unnecessary-type-parameters -- T is used only in the return type on purpose: the caller names the expected argument type once, here, instead of asserting at every read */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-parameters -- T is used
+   only in the return type on purpose: the caller names the expected argument
+   type once, here, instead of asserting at every read */
 /**
  * Reads one argument of one recorded mock call, failing the test when
  * the call or the argument is absent. The overload hands the caller the
@@ -58,7 +60,8 @@ export function getMockCallArg<T>(
   callIndex: number,
   argIndex: number,
 ): T
-/* eslint-enable @typescript-eslint/no-unnecessary-type-parameters -- end of the return-typed `getMockCallArg` overload */
+/* eslint-enable @typescript-eslint/no-unnecessary-type-parameters -- end of the
+   return-typed `getMockCallArg` overload */
 export function getMockCallArg(
   mockFunction: RecordedCalls,
   callIndex: number,

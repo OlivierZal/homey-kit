@@ -3,7 +3,8 @@
  * support concurrent STRUCTURAL capability mutations (add/remove/options),
  * so those callers chain them; plain value writes stay concurrent.
  * @param items - Elements fed through `run`, one at a time in iteration order.
- * @param run - Async operation applied to each element; its promise settles before the next element starts.
+ * @param run - Async operation applied to each element; its promise settles
+ * before the next element starts.
  * @category Utilities
  */
 export const sequential = async <T>(
@@ -11,7 +12,9 @@ export const sequential = async <T>(
   run: (item: T) => Promise<void>,
 ): Promise<void> => {
   for (const item of items) {
-    // eslint-disable-next-line no-await-in-loop -- sequential by design: the rule targets accidental serialization, and the compliant shapes (reduce chain, awaited recursion) read worse than the loop
+    /* eslint-disable-next-line no-await-in-loop -- sequential by design: the
+       rule targets accidental serialization, and the compliant shapes (reduce
+       chain, awaited recursion) read worse than the loop */
     await run(item)
   }
 }

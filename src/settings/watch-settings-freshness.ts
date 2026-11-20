@@ -18,7 +18,8 @@ import { homeyApiGet } from './callback-api.ts'
  * boot-error route (`POST /boot-error`); a missed one is acceptable, so
  * the callback swallows the outcome.
  * @param homey - The settings SDK handle.
- * @returns Whether the boot check issued a refetch — the caller must then skip its own init: the document is about to be replaced.
+ * @returns Whether the boot check issued a refetch — the caller must then skip
+ * its own init: the document is about to be replaced.
  * @category Settings
  */
 export const watchSettingsFreshness = async (homey: Homey): Promise<boolean> =>

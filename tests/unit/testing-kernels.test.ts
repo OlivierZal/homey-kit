@@ -78,7 +78,8 @@ describe('route-guard findings', () => {
 
     expect(findings.undeclaredPaths).toStrictEqual([
       '/thing',
-      // eslint-disable-next-line no-template-curly-in-string -- the finding names the template verbatim
+      /* eslint-disable-next-line no-template-curly-in-string -- the finding
+         names the template verbatim */
       '/thing/${id}/tag',
     ])
     expect(findings.undeclaredMethodCalls).toStrictEqual([
@@ -94,7 +95,8 @@ describe('route-guard findings', () => {
     })
 
     expect(findings.undeclaredTemplateCalls).toStrictEqual([
-      // eslint-disable-next-line no-template-curly-in-string -- the finding names the template verbatim
+      /* eslint-disable-next-line no-template-curly-in-string -- the finding
+         names the template verbatim */
       'POST /thing/${id}/tag',
     ])
   })

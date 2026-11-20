@@ -41,7 +41,9 @@ const readManifest = async (manifestUrl: URL): Promise<string | null> => {
  * `node_modules` and fails open, disabling the freshness handshake with
  * no symptom. Nothing is memoised either: a module whose purpose is
  * defeating stale caches must not hold one.
- * @param manifestUrl - Where the app's bundler emitted `webview-hashes.json`, usually `new URL('../webview-hashes.json', import.meta.url)` from the app root.
+ * @param manifestUrl - Where the app's bundler emitted `webview-hashes.json`,
+ * usually `new URL('../webview-hashes.json', import.meta.url)` from the app
+ * root.
  * @returns The page-entry → live-identity map.
  * @category Node
  */
