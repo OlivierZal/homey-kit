@@ -39,10 +39,12 @@ export interface TypedManagerDrivers<TDriver> {
 export interface TypedManagerSettings<TSettings extends object> {
   /**
    * The SDK read, narrowed to the app's settings shape.
+   * @template T - The key read, which selects the type returned.
    */
   get: <T extends keyof TSettings>(key: T) => TSettings[T]
   /**
    * The SDK write, constraining the value to the key's own type.
+   * @template T - The key written, which selects the type of the value.
    */
   set: <T extends keyof TSettings>(key: T, value: TSettings[T]) => void
   /**

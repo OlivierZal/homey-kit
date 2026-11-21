@@ -2,6 +2,7 @@
  * Runs `run` over `items` strictly one at a time. The Homey SDK does not
  * support concurrent STRUCTURAL capability mutations (add/remove/options),
  * so those callers chain them; plain value writes stay concurrent.
+ * @template T - Type of the elements handed to `run`.
  * @param items - Elements fed through `run`, one at a time in iteration order.
  * @param run - Async operation applied to each element; its promise settles
  * before the next element starts.

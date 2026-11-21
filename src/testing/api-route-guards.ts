@@ -6,6 +6,7 @@
 // `describe`/`it` block asserting over `analyzeRouteGuards` — declaring
 // the suite app-side is what keeps every test file visibly a test file.
 // The declaration half lives in `findContractBreach`.
+
 import { readdir, readFile } from 'node:fs/promises'
 
 import { namedGroup } from '../named-group.ts'

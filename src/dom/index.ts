@@ -115,7 +115,8 @@ const getElement = <T extends HTMLElement>(
  * Reads a button, narrowing the untyped lookup the DOM answers with.
  * @param id - The element id, without `#`.
  * @returns The element, typed as a button.
- * @throws TypeError When the id is absent, or names another kind of element.
+ * @throws A `TypeError` when the id is absent, or names another
+ * kind of element.
  * @category DOM
  */
 export const getButton = (id: string): HTMLButtonElement =>
@@ -125,7 +126,8 @@ export const getButton = (id: string): HTMLButtonElement =>
  * Reads a details element, narrowing the untyped lookup.
  * @param id - The element id, without `#`.
  * @returns The element, typed as a details.
- * @throws TypeError When the id is absent, or names another kind of element.
+ * @throws A `TypeError` when the id is absent, or names another
+ * kind of element.
  * @category DOM
  */
 export const getDetails = (id: string): HTMLDetailsElement =>
@@ -135,7 +137,8 @@ export const getDetails = (id: string): HTMLDetailsElement =>
  * Reads a div, narrowing the untyped lookup.
  * @param id - The element id, without `#`.
  * @returns The element, typed as a div.
- * @throws TypeError When the id is absent, or names another kind of element.
+ * @throws A `TypeError` when the id is absent, or names another
+ * kind of element.
  * @category DOM
  */
 export const getDiv = (id: string): HTMLDivElement =>
@@ -145,7 +148,8 @@ export const getDiv = (id: string): HTMLDivElement =>
  * Reads a fieldset, narrowing the untyped lookup.
  * @param id - The element id, without `#`.
  * @returns The element, typed as a fieldset.
- * @throws TypeError When the id is absent, or names another kind of element.
+ * @throws A `TypeError` when the id is absent, or names another
+ * kind of element.
  * @category DOM
  */
 export const getFieldset = (id: string): HTMLFieldSetElement =>
@@ -155,7 +159,8 @@ export const getFieldset = (id: string): HTMLFieldSetElement =>
  * Reads an input, narrowing the untyped lookup.
  * @param id - The element id, without `#`.
  * @returns The element, typed as an input.
- * @throws TypeError When the id is absent, or names another kind of element.
+ * @throws A `TypeError` when the id is absent, or names another
+ * kind of element.
  * @category DOM
  */
 export const getInput = (id: string): HTMLInputElement =>
@@ -165,7 +170,8 @@ export const getInput = (id: string): HTMLInputElement =>
  * Reads a select, narrowing the untyped lookup.
  * @param id - The element id, without `#`.
  * @returns The element, typed as a select.
- * @throws TypeError When the id is absent, or names another kind of element.
+ * @throws A `TypeError` when the id is absent, or names another
+ * kind of element.
  * @category DOM
  */
 export const getSelect = (id: string): HTMLSelectElement =>
@@ -175,7 +181,8 @@ export const getSelect = (id: string): HTMLSelectElement =>
  * Reads a span, narrowing the untyped lookup.
  * @param id - The element id, without `#`.
  * @returns The element, typed as a span.
- * @throws TypeError When the id is absent, or names another kind of element.
+ * @throws A `TypeError` when the id is absent, or names another
+ * kind of element.
  * @category DOM
  */
 export const getSpan = (id: string): HTMLSpanElement =>
@@ -315,11 +322,10 @@ export const createSelect = (
 
 /**
  * Reads a form control as the domain value it carries: a checkbox as a
- * tri-state boolean (`null` while indeterminate), a bounded number input
- * through the caller's number strategy when one is given, a boolean
- * string as a boolean, and anything else as a number when finite, else
- * the raw string. An empty value reads as `null` — "no instruction",
- * never an empty-string write.
+ * tri-state boolean (`null` while indeterminate), a boolean string as a
+ * boolean, and anything else as a number when finite, else the raw
+ * string. An empty value reads as `null` — "no instruction", never an
+ * empty-string write.
  *
  * The numeric read is by VALUE, not by control: a `<select>` whose option
  * ids are numeric strings reads as numbers too (a temperature grid built

@@ -5,6 +5,7 @@
 // test); `findContractBreach` exposes the comparison for direct
 // assertion (the seam this package's own mutation tests use). The
 // call-site half lives in `analyzeRouteGuards`.
+
 /**
  * One API surface under contract: its exposed handlers, its manifest
  * declaration and a display name for the failure output.

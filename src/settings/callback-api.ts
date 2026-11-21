@@ -9,6 +9,7 @@ import type Homey from 'homey/lib/HomeySettings.js'
 
 /**
  * The one promisification primitive the per-verb wrappers share.
+ * @template T - Type of the callback's success value.
  * @param call - Invoker handed the error-first callback to pass to the SDK.
  * @returns The callback's success value.
  * @category Settings
@@ -43,6 +44,7 @@ export const homeyApiDelete = async (
 
 /**
  * `GET` against the app's own API surface.
+ * @template T - Type of the handler's result, chosen by the caller.
  * @param homey - The settings SDK handle.
  * @param path - The declared route, method-matched by the app's manifest.
  * @returns The handler's result.
@@ -55,6 +57,7 @@ export const homeyApiGet = async <T>(homey: Homey, path: string): Promise<T> =>
 
 /**
  * `POST` against the app's own API surface.
+ * @template T - Type of the handler's result, chosen by the caller.
  * @param homey - The settings SDK handle.
  * @param path - The declared route, method-matched by the app's manifest.
  * @param body - The request payload, serialized by the SDK.
@@ -72,6 +75,7 @@ export const homeyApiPost = async <T>(
 
 /**
  * `PUT` against the app's own API surface.
+ * @template T - Type of the handler's result, chosen by the caller.
  * @param homey - The settings SDK handle.
  * @param path - The declared route, method-matched by the app's manifest.
  * @param body - The request payload, serialized by the SDK.
