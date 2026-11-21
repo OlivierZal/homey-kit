@@ -31,6 +31,7 @@ export interface RecordedCalls {
 // asserts predicates; an annotated arrow satisfies that.
 /**
  * Narrows a possibly-absent value, failing the test where it is absent.
+ * @template T - Type of the value when it is present.
  * @param value - The value to narrow.
  * @category Testing
  */
