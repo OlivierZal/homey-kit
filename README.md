@@ -481,12 +481,12 @@ channels, which configs' `check-pins.sh` polices exactly as it does for
 - `reusable-homey-validate.yml` — the family's install action, then
   Athom's validator at publish level; runs on every app pull request.
 - `reusable-homey-publish.yml` — the store release from the `homey`
-  environment, through the Homey CLI, then the assertion that the
-  packaged bundles the CLI's post-copy build must emit are there; takes
-  `bundles` (one path per line) and `stamped-page`, and the `HOMEY_PAT`
-  secret. The page of the build it uploaded, where the release is
-  published from, is the run's deployment link and the line of its
-  summary.
+  environment, through the Homey CLI on the current Node LTS, then the
+  assertion that the packaged bundles the CLI's post-copy build must
+  emit are there; takes `bundles` (one path per line) and
+  `stamped-page`, and the `HOMEY_PAT` secret. The page of the build it
+  uploaded, where the release is published from, is the run's
+  deployment link and the line of its summary.
 - `ios-floor-watch.yml` — re-reads, monthly and on dispatch, the Homey
   mobile app's App Store iOS minimum the webview floor is derived from,
   and opens an issue here on any move.

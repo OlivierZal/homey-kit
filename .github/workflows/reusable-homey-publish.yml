@@ -30,9 +30,24 @@ jobs:
       - uses: $/.github/actions/setup-node-and-install
         with:
           cache: none
-          node-version: '22'
+          # The Homey CLI states the Node it runs on (24 or newer since
+          # 4.5.0), and under an older one npm settles, without a word,
+          # for the last CLI that accepts it: 4.4.0 under Node 22. Athom's
+          # publish action runs the CLI, and the app's build with it, on
+          # the current LTS: so does this job.
+          node-version: lts/*
           npm-token: ${{ secrets.GITHUB_TOKEN }}
           require-npm-token: 'true'
+      # The CLI is not a dependency of the apps: it is fetched at each
+      # release, as Athom's action fetches it, under the rules this
+      # family holds its dependencies to. Nothing published in the last
+      # seven days is installed (Dependabot's cooldown here), no install
+      # script runs, and the store token is not in this step's
+      # environment.
+      - name: Install the Homey CLI
+        run: >-
+          npm install --global --ignore-scripts --min-release-age=7
+          homey@latest
       # The command Athom's publish action runs, in a container of its
       # own and after a second install there, answering the app's page
       # alone. Run in the job's install, the CLI's closing line can be
@@ -47,7 +62,7 @@ jobs:
           HOMEY_PAT: ${{ secrets.HOMEY_PAT }}
         shell: bash
         run: |
-          npx --yes homey app publish | tee "$RUNNER_TEMP/publish.log"
+          homey app publish | tee "$RUNNER_TEMP/publish.log"
           url=$(
             grep --only-matching --extended-regexp \
               'https://tools\.developer\.homey\.app/apps/app/[^/[:space:]]+/build/[0-9]+' \

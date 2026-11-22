@@ -21,7 +21,7 @@ import { parse } from 'yaml'
 // that read inputs or a secret. A rename or a dropped grant fails here
 // rather than at three apps' next release. The one script that decides
 // something, the publish step's, is run as well: against the lines the
-// CLI prints, with a stand-in for the CLI.
+// Homey CLI prints, with a stand-in for it.
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
@@ -133,6 +133,34 @@ describe('reusable-homey-publish.yml', () => {
     })
   })
 
+  // The CLI states the Node it runs on, and npm settles without a word
+  // for an older CLI under an older Node (4.4.0 under Node 22, where
+  // the latest was 4.6.3): the job runs on the current LTS, as Athom's
+  // own action does, and asks for the latest by name. The CLI's
+  // packages run no install script, none of them is younger than the
+  // seven days Dependabot waits here, and the step that fetches them
+  // holds no secret.
+  it('should fetch the latest CLI on the current LTS, without scripts or secrets', () => {
+    const steps = stepsOf('reusable-homey-publish.yml', 'publish')
+    const setup = asRecord(
+      steps.find(
+        ({ uses }) =>
+          typeof uses === 'string' && uses.endsWith('setup-node-and-install'),
+      )?.with,
+      'the install inputs',
+    )
+    const install = asRecord(
+      steps.find(({ name }) => name === 'Install the Homey CLI'),
+      'the CLI install step',
+    )
+
+    expect(setup['node-version']).toBe('lts/*')
+    expect(install.run).toBe(
+      'npm install --global --ignore-scripts --min-release-age=7 homey@latest',
+    )
+    expect(install.env).toBeUndefined()
+  })
+
   // The token reaches the CLI through the environment, never
   // interpolated into the script, and `shell: bash` is what makes a
   // failed upload fail the step through the `tee` (`pipefail`).
@@ -165,7 +193,7 @@ describe('reusable-homey-publish.yml', () => {
 })
 
 // The publish step's script, run as the runner runs a `shell: bash`
-// step, against a stand-in for `npx` that prints what it is told and
+// step, against a stand-in for `homey` that prints what it is told and
 // exits as it is told. The lines are the CLI's own, off a release's
 // log (homey 4.6.3, 2026-11-21), the app's id apart.
 describe('the publish step of reusable-homey-publish.yml', () => {
@@ -212,12 +240,12 @@ describe('the publish step of reusable-homey-publish.yml', () => {
       path.join(sandbox.directory, 'app.json'),
       JSON.stringify({ id: 'com.example.app' }),
     )
-    const npx = path.join(sandbox.directory, 'npx')
+    const cli = path.join(sandbox.directory, 'homey')
     writeFileSync(
-      npx,
+      cli,
       '#!/bin/sh\nprintf \'%s\\n\' "$CLI_LINES"\nexit "$CLI_STATUS"\n',
     )
-    chmodSync(npx, 0o755)
+    chmodSync(cli, 0o755)
   })
 
   afterEach(() => {
