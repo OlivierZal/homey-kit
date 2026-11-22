@@ -28,11 +28,12 @@ jobs:
         name: Read the build's page off the publish log
         run: |
           api() {
+            local route="$1"
             curl --fail --silent --show-error --location \
               --retry 5 --retry-delay 2 --retry-all-errors \
               --header "Authorization: Bearer $GH_TOKEN" \
               --header 'Accept: application/vnd.github+json' \
-              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/$1"
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/$route"
           }
           jobs="runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs"
           job=$(
