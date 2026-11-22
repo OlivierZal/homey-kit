@@ -223,11 +223,26 @@ go-to-definition land on real source.
   `uses:` refs in the same commit as the npm pin. Validate proves itself
   on every app pull request (its required check reads
   `validate / Validate app`); publish is release-only and proven by each
-  app's next store release; the watch opens ONE issue here on any move
-  of the recorded 16.4 (below 17 the derivation only needs restating, at
-  17 the `v` ban stops being derivable, at 17.4 the whole es2023 floor
-  does), and fails the run on an empty or unreadable answer. The shapes
-  are pinned in `tests/unit/homey-workflows.test.ts`.
+  app's next store release. It runs the Homey CLI itself
+  (`npx --yes homey app publish`, headless, the token in the step's
+  environment) since 9.1.0, where it called Athom's publish action: a
+  Docker action that installs the app a second time in a container of
+  its own (`node:lts-alpine`), runs that same command, and answers the
+  app's page alone. The CLI's closing line names the build it created
+  (`…/apps/app/<id>/build/<n>`, read off homey 4.6.3), the page a
+  release is published from: the step answers it, the `homey`
+  environment carries it as the run's deployment link and the summary
+  prints it. The CLI is not a dependency of the apps: it is fetched at
+  each run, the latest, as in the action, so a release whose CLI names
+  no build answers the app's page, never a failed upload, and a CLI
+  that fails fails the step. Measured on a release of 2026-11-21 (a job
+  of 118 s): 6 s to build the action's image and 46 s for its second
+  install. The suite RUNS that step's script against the CLI's own
+  lines, a stand-in on `PATH` for `npx`. The watch opens ONE issue here
+  on any move of the recorded 16.4 (below 17 the derivation only needs
+  restating, at 17 the `v` ban stops being derivable, at 17.4 the whole
+  es2023 floor does), and fails the run on an empty or unreadable
+  answer. The shapes are pinned in `tests/unit/homey-workflows.test.ts`.
 - **Device node runtime — measured, no API floor**: the fleet
   measurement (2026-08) put every up-to-date device at Node 22.20
   (Pro Early 2019) or 22.23 (Pro 2023), which is what `engines.node`

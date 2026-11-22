@@ -1,17 +1,27 @@
-import { readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 
 // The three Homey process workflows this package hosts since 6.1.0 —
 // the apps' validate and publish paths, and the iOS floor watch — are
 // release-only or scheduled, so what a static read can hold is the
 // shape the callers depend on: the call surface, the environment and
-// the grants the jobs claim, and the injection posture of the one
-// script that reads inputs. A rename or a dropped grant fails here
-// rather than at three apps' next release.
+// the grants the jobs claim, and the injection posture of the scripts
+// that read inputs or a secret. A rename or a dropped grant fails here
+// rather than at three apps' next release. The one script that decides
+// something, the publish step's, is run as well: against the lines the
+// CLI prints, with a stand-in for the CLI.
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
@@ -42,6 +52,22 @@ const stepsOf = (file: string, id: string): Record<string, unknown>[] => {
     throw new TypeError(`${file}#${id} has no steps`)
   }
   return steps.map((step) => asRecord(step, `${file}#${id} step`))
+}
+
+const publishStep = (): Record<string, unknown> =>
+  asRecord(
+    stepsOf('reusable-homey-publish.yml', 'publish').find(
+      ({ name }) => name === 'Publish',
+    ),
+    'the publish step',
+  )
+
+const publishScript = (): string => {
+  const { run } = publishStep()
+  if (typeof run !== 'string') {
+    throw new TypeError('the publish step has no script')
+  }
+  return run
 }
 
 describe('reusable-homey-validate.yml', () => {
@@ -88,14 +114,40 @@ describe('reusable-homey-publish.yml', () => {
     expect(asRecord(secrets.HOMEY_PAT, 'HOMEY_PAT').required).toBe(true)
   })
 
+  // The environment's link is the page the publish step answers: the
+  // build's, one click from the run.
   it('should publish from the homey environment with the read grants only', () => {
     const publish = jobOf('reusable-homey-publish.yml', 'publish')
+    const environment = asRecord(publish.environment, 'environment')
 
-    expect(publish.environment).toBe('homey')
+    expect(new Set(Object.keys(environment))).toStrictEqual(
+      new Set(['name', 'url']),
+    )
+    expect(environment.name).toBe('homey')
+    expect(environment.url).toMatch(
+      /^\$\{\{ steps\.publish\.outputs\.url \}\}$/v,
+    )
     expect(publish.permissions).toStrictEqual({
       contents: 'read',
       packages: 'read',
     })
+  })
+
+  // The token reaches the CLI through the environment, never
+  // interpolated into the script, and `shell: bash` is what makes a
+  // failed upload fail the step through the `tee` (`pipefail`).
+  it('should hand the CLI its token from the environment, headless', () => {
+    const { env: stepEnv, id, run, shell } = publishStep()
+    const env = asRecord(stepEnv, 'publish env')
+
+    expect(id).toBe('publish')
+    expect(new Set(Object.keys(env))).toStrictEqual(
+      new Set(['HOMEY_HEADLESS', 'HOMEY_PAT']),
+    )
+    expect(env.HOMEY_HEADLESS).toBe('1')
+    expect(env.HOMEY_PAT).toMatch(/^\$\{\{ secrets\.HOMEY_PAT \}\}$/v)
+    expect(run).not.toMatch(/\$\{\{/v)
+    expect(shell).toBe('bash')
   })
 
   // The inputs reach the assertion through the environment, never
@@ -109,6 +161,97 @@ describe('reusable-homey-publish.yml', () => {
     expect(env.BUNDLES).toMatch(/^\$\{\{ inputs\.bundles \}\}$/v)
     expect(env.STAMPED_PAGE).toMatch(/^\$\{\{ inputs\.stamped-page \}\}$/v)
     expect(assertion?.run).not.toMatch(/\$\{\{/v)
+  })
+})
+
+// The publish step's script, run as the runner runs a `shell: bash`
+// step, against a stand-in for `npx` that prints what it is told and
+// exits as it is told. The lines are the CLI's own, off a release's
+// log (homey 4.6.3, 2026-11-21), the app's id apart.
+describe('the publish step of reusable-homey-publish.yml', () => {
+  const APP_PAGE = 'https://tools.developer.homey.app/apps/app/com.example.app'
+  const UPLOADED = [
+    '✓ Submitting com.example.app@1.2.3...',
+    ' — App archive size: 20.99 MB, 2212 files',
+    '✓ Created Build ID 360',
+    '✓ Uploading com.example.app@1.2.3...',
+    '✓ App com.example.app@1.2.3 successfully uploaded.',
+  ]
+
+  const sandbox = { directory: '' }
+
+  const publish = ({
+    lines,
+    status = 0,
+  }: {
+    readonly lines: readonly string[]
+    readonly status?: number
+  }): { readonly output: string; readonly status: number | null } => {
+    const outputPath = path.join(sandbox.directory, 'output')
+    writeFileSync(outputPath, '')
+    const { status: exitStatus } = spawnSync(
+      'bash',
+      ['--noprofile', '--norc', '-eo', 'pipefail', '-c', publishScript()],
+      {
+        cwd: sandbox.directory,
+        env: {
+          CLI_LINES: lines.join('\n'),
+          CLI_STATUS: String(status),
+          GITHUB_OUTPUT: outputPath,
+          PATH: [sandbox.directory, process.env.PATH].join(path.delimiter),
+          RUNNER_TEMP: sandbox.directory,
+        },
+      },
+    )
+    return { output: readFileSync(outputPath, 'utf8'), status: exitStatus }
+  }
+
+  beforeEach(() => {
+    sandbox.directory = mkdtempSync(path.join(tmpdir(), 'homey-publish-'))
+    writeFileSync(
+      path.join(sandbox.directory, 'app.json'),
+      JSON.stringify({ id: 'com.example.app' }),
+    )
+    const npx = path.join(sandbox.directory, 'npx')
+    writeFileSync(
+      npx,
+      '#!/bin/sh\nprintf \'%s\\n\' "$CLI_LINES"\nexit "$CLI_STATUS"\n',
+    )
+    chmodSync(npx, 0o755)
+  })
+
+  afterEach(() => {
+    rmSync(sandbox.directory, { force: true, recursive: true })
+  })
+
+  it('should answer the page of the build the CLI names', () => {
+    expect(
+      publish({
+        lines: [
+          ...UPLOADED,
+          '',
+          `Visit ${APP_PAGE}/build/360 to publish your app.`,
+        ],
+      }),
+    ).toStrictEqual({ output: `url=${APP_PAGE}/build/360\n`, status: 0 })
+  })
+
+  it("should answer the app's page when the CLI names no build", () => {
+    expect(publish({ lines: UPLOADED })).toStrictEqual({
+      output: `url=${APP_PAGE}\n`,
+      status: 0,
+    })
+  })
+
+  it('should fail, and answer no page, when the CLI fails', () => {
+    expect(
+      publish({
+        lines: [
+          '✖ The app is not valid, please fix the validation issues first.',
+        ],
+        status: 1,
+      }),
+    ).toStrictEqual({ output: '', status: 1 })
   })
 })
 
