@@ -1,0 +1,78 @@
+# The page a store release is published from is the BUILD's, and the
+# publish job answers the app's: Athom's publish action outputs that
+# page alone, while the CLI it runs names the build in its closing line
+# (`Visit …/apps/app/<id>/build/<n> to publish your app.`, read off
+# homey 4.6.3). Called after the publish job, this workflow reads that
+# line out of the job's log, prints the build's page in the run's
+# summary and answers it as `url`. It touches nothing of the publish
+# path: a caller without this job publishes as before, and a log that
+# cannot be read, or that names no build, is a warning and an empty
+# `url`, never a failed run behind an upload that went through: the
+# script fails on nothing, and each of its two requests is bounded well
+# inside the job's own timeout, so one that stalls ends in the warning
+# too. The caller grants `actions: read`, which reading a job's log
+# takes.
+jobs:
+  build-link:
+    name: Link the uploaded build
+    outputs:
+      url: ${{ steps.link.outputs.url }}
+    permissions:
+      actions: read
+    runs-on: ubuntu-24.04
+    steps:
+      # The run is still in progress, so the log is asked of the job, by
+      # its id: the one this attempt of the run names as the publish
+      # workflow names its own.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_JOB: Publish app on Homey
+        id: link
+        name: Read the build's page off the publish log
+        run: |
+          api() {
+            local route="$1"
+            curl --fail --silent --show-error --location \
+              --connect-timeout 10 --max-time 30 \
+              --retry 3 --retry-max-time 60 \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header 'Accept: application/vnd.github+json' \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/$route"
+          }
+          jobs="runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs"
+          job=$(
+            api "$jobs?per_page=100" |
+              jq --raw-output --arg name "$PUBLISH_JOB" \
+                'first(.jobs[] | select(.name | endswith($name)) | .id)' ||
+              true
+          )
+          url=''
+          if [ -n "$job" ]; then
+            echo "Reading the log of job $job."
+            url=$(
+              api "jobs/$job/logs" |
+                grep --only-matching --extended-regexp \
+                  'https://tools\.developer\.homey\.app/apps/app/[^/[:space:]]+/build/[0-9]+' |
+                tail -n 1 || true
+            )
+          fi
+          if [ -n "$url" ]; then
+            echo "Publish the uploaded build at $url" >> "$GITHUB_STEP_SUMMARY"
+          elif [ -n "$job" ]; then
+            echo '::warning::The log of the publish job gave no build.'
+          else
+            echo '::warning::This attempt of the run gave no publish job.'
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        shell: bash
+    timeout-minutes: 5
+name: Reusable Homey build link
+on:
+  workflow_call:
+    outputs:
+      url:
+        description: >-
+          The page of the build the publish job uploaded, empty when
+          none could be read.
+        value: ${{ jobs.build-link.outputs.url }}
+permissions: {}

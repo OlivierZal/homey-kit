@@ -209,7 +209,8 @@ go-to-definition land on real source.
   `Object.entries().map()`).
 - **The Homey process workflows live HERE (6.1.0)**:
   `reusable-homey-validate.yml`, `reusable-homey-publish.yml` and
-  `ios-floor-watch.yml`, moved from configs before its 6.0.0 release on
+  `ios-floor-watch.yml` (and `reusable-homey-build-link.yml` since
+  9.1.0, below), moved from configs before its 6.0.0 release on
   the cohesion argument — the floor watch guards the App Store minimum
   the doctrine above derives from, so its issue lands where the doctrine
   is; and a change to the apps' process now costs the three apps an
@@ -228,6 +229,45 @@ go-to-definition land on real source.
   17 the `v` ban stops being derivable, at 17.4 the whole es2023 floor
   does), and fails the run on an empty or unreadable answer. The shapes
   are pinned in `tests/unit/homey-workflows.test.ts`.
+- **The build's page is read off the publish log (9.1.0)**. A store
+  release is published from its BUILD's page, and Athom's publish
+  action outputs the app's page alone; the Homey CLI it runs names the
+  build in its closing line
+  (`Visit …/apps/app/<id>/build/<n> to publish your app.`, read off
+  homey 4.6.3). `reusable-homey-build-link.yml`, called by a second job
+  (`needs: publish`, `actions: read`), asks the API for the log of the
+  job the publish workflow names (`Publish app on Homey`, the two tied
+  by a test), reads the line, prints the page in the run's summary and
+  answers it as `url`. A log it cannot read, or one that names no
+  build, is a warning and an empty answer: an upload that went through
+  is never failed behind, the script failing on nothing and each of
+  its two requests bounded inside the job's timeout. The publish path
+  itself is untouched, which
+  is the point: a caller without the second job publishes as before.
+  What a static read cannot prove, the log of a finished job asked for
+  while its run is still in progress, `homey-build-link.yml` runs for
+  real on every pull request that touches the reusable, behind a
+  stand-in for the publish job; the suite runs the script too, against
+  a stand-in for `curl`.
+  WEIGHED AND LEFT, 2026-11-22: running the CLI in the job itself, in
+  place of Athom's action, which gives the line without the API.
+  Three facts, each measured that day. (1) The CLI's manifest asks
+  for Node 24 or newer since 4.4.1 (its own entry guard still takes
+  22), and under an older one npm settles without a word for the last
+  CLI whose manifest accepts it: `npx homey` resolved 4.4.0 under Node
+  22 while the latest was 4.6.3, so such a
+  job has to leave the apps' Node 22 for the LTS, as the action's
+  container (`node:lts-alpine`) does out of sight. (2) The CLI is no
+  dependency of the apps and the action fetches the latest at each
+  release, its packages' install scripts run, the store token in the
+  environment: done in a job of ours, Sonar reports the `npx` (S6505),
+  then the install outside a lockfile (S8543), which zizmor reports
+  too (`adhoc-packages`). (3) Locked here, the CLI's tree of some 380
+  packages brings its own advisories with it, 15 that day, three of
+  them high and most with no fix short of a major of the CLI's own
+  dependencies. So the choice was two recorded exemptions or fifteen
+  dismissals for a link, and neither was taken. What the action does
+  with that CLI is unchanged, and is Athom's.
 - **Device node runtime — measured, no API floor**: the fleet
   measurement (2026-08) put every up-to-date device at Node 22.20
   (Pro Early 2019) or 22.23 (Pro 2023), which is what `engines.node`

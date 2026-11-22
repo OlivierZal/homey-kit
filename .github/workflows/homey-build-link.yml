@@ -1,0 +1,43 @@
+# The build-link reusable reads another job's log through the API while
+# its own run is still in progress, which no static read can prove:
+# this workflow runs it for real whenever a pull request touches it,
+# behind a stand-in for the publish job that prints the CLI's closing
+# line under the name the reusable looks for. The build's number is the
+# run's own and reaches the line through a variable, so the page stands
+# whole in the printed line alone: the step's header, which the log
+# carries too, spells the variable.
+env:
+  APP: https://tools.developer.homey.app/apps/app/com.example.app
+jobs:
+  build-link:
+    needs: publish
+    permissions:
+      actions: read
+    uses: $/.github/workflows/reusable-homey-build-link.yml
+  check:
+    name: Check the page read
+    needs: build-link
+    permissions: {}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          BUILD: ${{ github.run_number }}
+          URL: ${{ needs.build-link.outputs.url }}
+        run: test "$URL" = "$APP/build/$BUILD"
+    timeout-minutes: 5
+  publish:
+    name: Publish app on Homey
+    permissions: {}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          BUILD: ${{ github.run_number }}
+        run: echo "Visit $APP/build/$BUILD to publish your app."
+    timeout-minutes: 5
+name: Homey build link
+on:
+  pull_request:
+    paths:
+      - .github/workflows/homey-build-link.yml
+      - .github/workflows/reusable-homey-build-link.yml
+permissions: {}

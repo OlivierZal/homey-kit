@@ -484,6 +484,11 @@ channels, which configs' `check-pins.sh` polices exactly as it does for
   environment, then the assertion that the packaged bundles the CLI's
   post-copy build must emit are there; takes `bundles` (one path per
   line) and `stamped-page`, and the `HOMEY_PAT` secret.
+- `reusable-homey-build-link.yml` — called after the publish job, reads
+  the page of the build it uploaded off that job's log, where the Homey
+  CLI names it, prints it in the run's summary and answers it as `url`;
+  takes the `actions: read` grant. A page it cannot read is a warning,
+  not a failed run behind an upload that went through.
 - `ios-floor-watch.yml` — re-reads, monthly and on dispatch, the Homey
   mobile app's App Store iOS minimum the webview floor is derived from,
   and opens an issue here on any move.
@@ -495,4 +500,23 @@ jobs:
       contents: read
       packages: read
     uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-validate.yml@<sha> # v6.1.0
+```
+
+```yaml title=".github/workflows/publish.yml"
+jobs:
+  build-link:
+    needs: publish
+    permissions:
+      actions: read
+    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-build-link.yml@<sha> # v9.1.0
+  publish:
+    permissions:
+      contents: read
+      packages: read
+    secrets:
+      HOMEY_PAT: ${{ secrets.HOMEY_PAT }}
+    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-publish.yml@<sha> # v9.1.0
+    with:
+      bundles: |
+        settings/index.js
 ```
