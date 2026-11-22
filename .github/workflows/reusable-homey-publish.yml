@@ -1,23 +1,20 @@
 # The apps' store release, callable: install with registry auth, publish
-# with the Homey CLI from the `homey` environment, then assert the
+# through Athom's action from the `homey` environment, then assert the
 # packaged bundles the CLI's post-copy build must have emitted (the
-# com.melcloud #1404 class — packing happens inside the CLI, so the
+# com.melcloud #1404 class — packing happens inside the action, so the
 # check is post-hoc and fails the workflow loudly right after the
 # upload). Derived from the three publish.yml files the apps carried
 # (2026-09-14), identical but for the bundle list and the stamped page,
 # which are the two inputs. The `homey` environment travels with the
-# job, as `npm` does in configs' reusable-publish.yml, and carries the
-# page the upload is published from as its deployment link; the caller
-# grants `contents: read` and `packages: read` and passes its HOMEY_PAT.
+# job, as `npm` does in configs' reusable-publish.yml; the caller grants
+# `contents: read` and `packages: read` and passes its HOMEY_PAT.
 # Hosted here as Homey process (see reusable-homey-validate.yml).
 concurrency:
   cancel-in-progress: false
   group: publish
 jobs:
   publish:
-    environment:
-      name: homey
-      url: ${{ steps.publish.outputs.url }}
+    environment: homey
     name: Publish app on Homey
     permissions:
       contents: read
@@ -30,48 +27,22 @@ jobs:
       - uses: $/.github/actions/setup-node-and-install
         with:
           cache: none
-          # The Homey CLI states the Node it runs on (24 or newer since
-          # 4.5.0), and under an older one npm settles, without a word,
-          # for the last CLI that accepts it: 4.4.0 under Node 22. Athom's
-          # publish action runs the CLI, and the app's build with it, on
-          # the current LTS: so does this job.
-          node-version: lts/*
+          node-version: '22'
           npm-token: ${{ secrets.GITHUB_TOKEN }}
+          # setup-node writes the registry auth to its user config only
+          # when given a registry — the `cp` below carries that file into
+          # the workspace for the publish action's container.
+          registry-url: https://npm.pkg.github.com
           require-npm-token: 'true'
-      # The CLI is not a dependency of the apps: it is fetched at each
-      # release, as Athom's action fetches it, under the rules this
-      # family holds its dependencies to. Nothing published in the last
-      # seven days is installed (Dependabot's cooldown here), no install
-      # script runs, and the store token is not in this step's
-      # environment.
-      - name: Install the Homey CLI
-        run: >-
-          npm install --global --ignore-scripts --min-release-age=7
-          homey@latest
-      # The command Athom's publish action runs, in a container of its
-      # own and after a second install there, answering the app's page
-      # alone. Run in the job's install, the CLI's closing line can be
-      # read: it names the build it created, the page a release is
-      # published from. A CLI that names none leaves the app's page, as
-      # the action answers, and a CLI that fails fails the step through
-      # the `tee` (`shell: bash` is what sets `pipefail`).
+          scope: '@olivierzal'
+      - run: cp "$NPM_CONFIG_USERCONFIG" "$GITHUB_WORKSPACE/.npmrc"
       - id: publish
         name: Publish
+        uses: athombv/github-action-homey-app-publish@48be66b7f2f870c22b6117d7bb84dfa06c4fc309 # v1
+        with:
+          personal_access_token: ${{ secrets.HOMEY_PAT }}
         env:
-          HOMEY_HEADLESS: '1'
-          HOMEY_PAT: ${{ secrets.HOMEY_PAT }}
-        shell: bash
-        run: |
-          homey app publish | tee "$RUNNER_TEMP/publish.log"
-          url=$(
-            grep --only-matching --extended-regexp \
-              'https://tools\.developer\.homey\.app/apps/app/[^/[:space:]]+/build/[0-9]+' \
-              "$RUNNER_TEMP/publish.log" | tail -n 1 || true
-          )
-          if [ -z "$url" ]; then
-            url="https://tools.developer.homey.app/apps/app/$(jq --raw-output .id app.json)"
-          fi
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # The inputs reach the shell through the environment, never
       # interpolated into the script.
       - name: Assert the packaged bundles
@@ -101,7 +72,7 @@ jobs:
       - name: URL
         env:
           URL: ${{ steps.publish.outputs.url }}
-        run: echo "Publish the uploaded build at $URL" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "Manage your app at $URL" >> "$GITHUB_STEP_SUMMARY"
     timeout-minutes: 30
 name: Reusable Homey publish
 on:
@@ -123,6 +94,6 @@ on:
     secrets:
       HOMEY_PAT:
         description: >-
-          The Homey developer token the CLI authenticates with.
+          The Homey developer token the publish action authenticates with.
         required: true
 permissions: {}

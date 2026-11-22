@@ -1,17 +1,4 @@
 rules:
-  # The Homey CLI the publish job runs is no dependency of the apps nor
-  # of this package: Athom ships it as the client of its store, fetched
-  # when a release is made, which is what its own publish action does.
-  # Held in a lockfile, its tree of some 380 packages would enter this
-  # family's bumps and alerts for a tool that runs in that one job. What
-  # the audit cannot see is what the step does about it: no install
-  # script runs, nothing published in the last seven days is installed,
-  # and no secret is in its environment. Line-scoped, so any other
-  # ad-hoc install is still reported and the entry lapses when the line
-  # moves.
-  adhoc-packages:
-    ignore:
-      - reusable-homey-publish.yml:49
   # The @claude mention stub's `issue_comment`, owner-gated by the family
   # workflow it calls (the job `if` on comment author association, then
   # claude-code-action's write-permission check); the verdict is recorded
