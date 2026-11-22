@@ -487,8 +487,8 @@ channels, which configs' `check-pins.sh` polices exactly as it does for
 - `reusable-homey-build-link.yml` — called after the publish job, reads
   the page of the build it uploaded off that job's log, where the Homey
   CLI names it, prints it in the run's summary and answers it as `url`;
-  takes the `actions: read` grant, and never fails a run behind an
-  upload that went through.
+  takes the `actions: read` grant. A page it cannot read is a warning,
+  not a failed run behind an upload that went through.
 - `ios-floor-watch.yml` — re-reads, monthly and on dispatch, the Homey
   mobile app's App Store iOS minimum the webview floor is derived from,
   and opens an issue here on any move.

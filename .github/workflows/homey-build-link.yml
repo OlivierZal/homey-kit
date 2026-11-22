@@ -2,7 +2,12 @@
 # its own run is still in progress, which no static read can prove:
 # this workflow runs it for real whenever a pull request touches it,
 # behind a stand-in for the publish job that prints the CLI's closing
-# line under the name the reusable looks for.
+# line under the name the reusable looks for. The build's number is the
+# run's own and reaches the line through a variable, so the page stands
+# whole in the printed line alone: the step's header, which the log
+# carries too, spells the variable.
+env:
+  APP: https://tools.developer.homey.app/apps/app/com.example.app
 jobs:
   build-link:
     needs: publish
@@ -16,9 +21,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - env:
-          EXPECTED: https://tools.developer.homey.app/apps/app/com.example.app/build/1
+          BUILD: ${{ github.run_number }}
           URL: ${{ needs.build-link.outputs.url }}
-        run: test "$URL" = "$EXPECTED"
+        run: test "$URL" = "$APP/build/$BUILD"
     timeout-minutes: 5
   publish:
     name: Publish app on Homey
@@ -26,8 +31,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - env:
-          PAGE: https://tools.developer.homey.app/apps/app/com.example.app/build/1
-        run: echo "Visit $PAGE to publish your app."
+          BUILD: ${{ github.run_number }}
+        run: echo "Visit $APP/build/$BUILD to publish your app."
     timeout-minutes: 5
 name: Homey build link
 on:

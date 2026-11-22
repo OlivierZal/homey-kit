@@ -7,8 +7,11 @@
 # summary and answers it as `url`. It touches nothing of the publish
 # path: a caller without this job publishes as before, and a log that
 # cannot be read, or that names no build, is a warning and an empty
-# `url`, never a failed run behind an upload that went through. The
-# caller grants `actions: read`, which reading a job's log takes.
+# `url`, never a failed run behind an upload that went through: the
+# script fails on nothing, and each of its two requests is bounded well
+# inside the job's own timeout, so one that stalls ends in the warning
+# too. The caller grants `actions: read`, which reading a job's log
+# takes.
 jobs:
   build-link:
     name: Link the uploaded build
@@ -30,7 +33,8 @@ jobs:
           api() {
             local route="$1"
             curl --fail --silent --show-error --location \
-              --retry 5 --retry-delay 2 --retry-all-errors \
+              --connect-timeout 10 --max-time 30 \
+              --retry 3 --retry-max-time 60 \
               --header "Authorization: Bearer $GH_TOKEN" \
               --header 'Accept: application/vnd.github+json' \
               "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/$route"
@@ -44,6 +48,7 @@ jobs:
           )
           url=''
           if [ -n "$job" ]; then
+            echo "Reading the log of job $job."
             url=$(
               api "jobs/$job/logs" |
                 grep --only-matching --extended-regexp \
@@ -53,8 +58,10 @@ jobs:
           fi
           if [ -n "$url" ]; then
             echo "Publish the uploaded build at $url" >> "$GITHUB_STEP_SUMMARY"
+          elif [ -n "$job" ]; then
+            echo '::warning::The log of the publish job gave no build.'
           else
-            echo '::warning::The publish log names no build.'
+            echo '::warning::This attempt of the run gave no publish job.'
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
         shell: bash
@@ -65,7 +72,7 @@ on:
     outputs:
       url:
         description: >-
-          The page of the build the publish job uploaded, empty when its
-          log names none.
+          The page of the build the publish job uploaded, empty when
+          none could be read.
         value: ${{ jobs.build-link.outputs.url }}
 permissions: {}

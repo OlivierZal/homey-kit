@@ -240,7 +240,9 @@ go-to-definition land on real source.
   by a test), reads the line, prints the page in the run's summary and
   answers it as `url`. A log it cannot read, or one that names no
   build, is a warning and an empty answer: an upload that went through
-  is never failed behind. The publish path itself is untouched, which
+  is never failed behind, the script failing on nothing and each of
+  its two requests bounded inside the job's timeout. The publish path
+  itself is untouched, which
   is the point: a caller without the second job publishes as before.
   What a static read cannot prove, the log of a finished job asked for
   while its run is still in progress, `homey-build-link.yml` runs for
@@ -249,10 +251,11 @@ go-to-definition land on real source.
   a stand-in for `curl`.
   WEIGHED AND LEFT, 2026-11-22: running the CLI in the job itself, in
   place of Athom's action, which gives the line without the API.
-  Three facts, each measured that day. (1) The CLI states the Node it
-  runs on, 24 or newer since 4.5.0, and under an older one npm settles
-  without a word for the last CLI that accepts it: `npx homey`
-  resolved 4.4.0 under Node 22 while the latest was 4.6.3, so such a
+  Three facts, each measured that day. (1) The CLI's manifest asks
+  for Node 24 or newer since 4.4.1 (its own entry guard still takes
+  22), and under an older one npm settles without a word for the last
+  CLI whose manifest accepts it: `npx homey` resolved 4.4.0 under Node
+  22 while the latest was 4.6.3, so such a
   job has to leave the apps' Node 22 for the LTS, as the action's
   container (`node:lts-alpine`) does out of sight. (2) The CLI is no
   dependency of the apps and the action fetches the latest at each
