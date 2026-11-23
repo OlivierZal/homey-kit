@@ -9,6 +9,12 @@
 # job, as `npm` does in configs' reusable-publish.yml; the caller grants
 # `contents: read` and `packages: read` and passes its HOMEY_PAT.
 # Hosted here as Homey process (see reusable-homey-validate.yml).
+#
+# The job judges the commit before it uploads anything (10.0.0), with
+# the guard the libraries publish behind: `check-release.sh`, read out
+# of the @olivierzal/configs the app installs (9.0.0 or later). It asks
+# for no grant: the runs of a public repository are read without
+# `actions: read`.
 concurrency:
   cancel-in-progress: false
   group: publish
@@ -35,6 +41,16 @@ jobs:
           registry-url: https://npm.pkg.github.com
           require-npm-token: 'true'
           scope: '@olivierzal'
+      # Nothing below looks at the code: the action packs it and uploads
+      # it. So the commit must be one its CI has judged on the default
+      # branch, whether a release names it or a run dispatched by hand.
+      - env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.sha }}
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+          THIS_REPO: ${{ github.repository }}
+        run: bash node_modules/@olivierzal/configs/scripts/check-release.sh
       - run: cp "$NPM_CONFIG_USERCONFIG" "$GITHUB_WORKSPACE/.npmrc"
       - id: publish
         name: Publish
