@@ -519,10 +519,10 @@ run still going is waited for, eight minutes at the most; a commit
 whose run failed, or that has none on that branch, is not uploaded. The
 check comes with `@olivierzal/configs`, which your app must install at
 9.0.0 or later. The job then uploads a build with `HOMEY_PAT`, your
-Homey developer token. It then
-fails the run when a file of `bundles` (one path per line) or
-`stamped-page` (default `settings/index.html`), both relative to
-`.homeybuild`, is missing or empty, or when that page is unstamped.
+Homey developer token, and fails the run when a file of `bundles` (one
+path per line) or `stamped-page` (default `settings/index.html`), both
+relative to `.homeybuild`, is missing or empty, or when that page is
+unstamped.
 Build link writes the address of the uploaded build's page, where you
 publish the build, to the run summary. It returns that address as
 `url`: empty, with a warning, when it cannot read it.
