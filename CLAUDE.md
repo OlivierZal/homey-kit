@@ -184,7 +184,7 @@ file, never reports, so the block dies in silence and narrows nothing
 (measured 2026-11-04 against 1.8.3, both ways). Module augmentation
 cannot ship in a package, so each app keeps its own override file,
 seven lines (`homey-override.d.ts`). Managers are narrowed
-app-side (README, "Typing the Homey instance"); carrying
+app-side (README, "Type the Homey instance"); carrying
 `drivers`/`settings` through `HomeyTypes` is asked of Athom (point 7 of
 the 1.7.0 verdict, still open). And `./manifest`'s inputs accept the
 SDK's `DriverManifest` structurally: `tests/types/manifest-inputs.ts`
