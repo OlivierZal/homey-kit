@@ -14,10 +14,16 @@ re-derived there when the tree moves, never nudged by hand here. A
 fresh clone needs the install floor; the device needs the device floor;
 neither line is the other.
 
-The README speaks to the package's CONSUMER (install, subpaths, wiring
-examples); this file speaks to its MAINTAINER. Doctrine evolves HERE
-first — a rule stated in both files must say the same thing, and the
-README carries at most a one-line pointer at it.
+The README speaks to the package's USER: what it gives, how to install
+it and how to use it, with examples that compile. It never explains
+how the package is built or why (owner's rule, 2026-11-22): the
+architecture and the full surface are the generated reference's, the
+doctrine and its reasons are this file's, the workflow is
+CONTRIBUTING.md's. Doctrine evolves HERE first — a behaviour or a
+consumer constraint stated in both files must say the same thing.
+Nothing compiles the README's examples (no test reads the file, and
+the lint has no Markdown code-block processor): a change of surface
+re-reads each of them against the barrels.
 
 ## Commands
 
@@ -42,12 +48,17 @@ Run the FULL suite before any push; check real exit codes:
   dev-import allowance for `src/settings` and `src/testing` (they
   import what consumers hold as devDependencies).
 - `npm run typecheck` — the native TypeScript 7 compiler, reached by its
-  explicit path (`node ./node_modules/@typescript/native/bin/tsc`). A
-  bare `tsc` is NOT the same compiler: under the official 6/7 layout the
-  `.bin/tsc` shim belongs to `@typescript/old`, the TS6 the compat
-  package depends on, so it silently typechecks with TypeScript 6 — the
-  native 7.x ships no shim at all, and `tsc6` is that same TS6. Only the
-  explicit path holds.
+  explicit path (`node ./node_modules/@typescript/native/bin/tsc`).
+  Never shorten it. Not because a bare `tsc` runs the wrong compiler
+  today: re-measured 2026-11-22, in this tree and in fresh installs
+  under npm 10.9.8 and 11.20.0, `.bin/tsc` is the native 7.x compiler
+  and `tsc6` the only shim of the TypeScript 6 compat package (it was
+  the other way round when the layout was adopted, in August 2026). Two
+  installed packages declare a `tsc` bin, `@typescript/native` and
+  `@typescript/old` (the TypeScript 6 the compat package depends on),
+  and npm gives the shim to one of them: the explicit path names the
+  package the script means, so a layout change fails loudly instead of
+  swapping the compiler behind the shim.
 - `npm test` / `npm run test:coverage` — vitest; thresholds are 100 %
   on all four axes (the family's `coverageDefaults` fragment from
   `@olivierzal/configs/vitest-coverage`, which also fixes the
@@ -102,7 +113,9 @@ spellings of the same element accessor were exactly that).
 "It looks generic" is not the test — it is available as an argument for
 anything. The test is where the shape comes from: the platform, or a
 single app's taste. App-specific ledgers, overrides and manifests stay
-in their app; no native-Homey behavior overrides.
+in their app; no native-Homey behavior overrides. `./dom` draws the
+same line: anything tied to one app's domain stays in that app — zone
+pickers, log rows, comboboxes.
 
 **Layered exports are deliberate, not ghosts**: `ensureFreshWebview`
 under `watchWebviewFreshness`, itself under `watchSettingsFreshness`
@@ -168,7 +181,9 @@ interface Homey extends HomeyLib { … } }` block names the class as its
 own base (TS2310) and collides on every member it re-types (TS2717) —
 errors that a `.d.ts` under `skipLibCheck`, which is every app's override
 file, never reports, so the block dies in silence and narrows nothing
-(measured 2026-11-04 against 1.8.3, both ways). Managers are narrowed
+(measured 2026-11-04 against 1.8.3, both ways). Module augmentation
+cannot ship in a package, so each app keeps its own override file,
+seven lines (`homey-override.d.ts`). Managers are narrowed
 app-side (README, "Typing the Homey instance"); carrying
 `drivers`/`settings` through `HomeyTypes` is asked of Athom (point 7 of
 the 1.7.0 verdict, still open). And `./manifest`'s inputs accept the
@@ -177,6 +192,22 @@ pins it both ways (the SDK type fits, the kit type stays the wider one),
 so a kit field typed narrower than the schema fails typecheck HERE,
 never at an app's adoption. The lock carries `homey-lib` (2.53.0 at
 adoption) as the types' transitive, not as anything the kit imports.
+
+The app-side narrowing PICKS the members (the README's recipe:
+`readonly getDrivers: TypedManagerDrivers<MyDriver>['getDrivers']`) and
+never extends the generic:
+`interface ManagerDrivers extends TypedManagerDrivers<MyDriver> {}` is a
+trap, measured on two apps. Without the SDK class as its base the
+interface loses `getDriver`, `log`, `error` and the rest. With both
+parents, each declares `getDrivers`: in a file the compiler checks that
+is TS2320, the two not being identical (re-measured 2026-11-22, native
+7.0.2, SDK types 1.8.3, a driver class with a member of its own), and
+the member then reads as the first parent's, the SDK's wide type when
+its manager comes first. Where nothing reports it (measured the same
+day: a declaration file under `skipLibCheck`), the interface compiles
+and `getDrivers()` hands back `Driver`s where the app expects
+`MyDriver`s. Picking the members keeps one declaration site per member,
+so a divergence cannot hide.
 
 `./testing` therefore rides to the device unused, and that is ACCEPTED —
 re-measured 2026-09-06, after #72 hoisted the helpers and the floor
@@ -323,6 +354,14 @@ fenced FIRST for that reason.
 
 - The dirty-gate contract is exclusive-arming (baseline XOR predicate);
   `serialize` stays a PURE snapshot in baseline mode.
+- The boot cycle's deadline REJECTS rather than resolves — a hung fetch
+  must surface as an error, not resolve silently into a half-built
+  page — and the work is not cancelled, so a late success repaints over
+  the degraded state. Its timeout message is a parameter, not policy
+  (`timeoutMessage`): the default names neither a settings page nor a
+  widget, one that names itself passes its own wording (com.heatzy's
+  settings page does), and neither should have to accept the other's
+  wording to share the cycle.
 - `getWebviewHashes` REQUIRES the manifest URL: an inferred default
   once resolved inside `node_modules`, failed open and silently
   disabled the handshake. A module built to defeat stale caches holds
@@ -332,7 +371,16 @@ fenced FIRST for that reason.
   them — suite factories that declared the tests package-side made
   every consumer test file read as empty (Sonar S2187) and were
   removed. A kernel change here reaches the apps only through a
-  release + adoption train.
+  release + adoption train. The compile-time half of the contract stays
+  app-side too: asserting `expectTypeOf<Handler>().toBeFunction()` over
+  the surface's handler union typechecks only when every handler is
+  callable. The webview-floor closure is NOT a kit kernel any more:
+  since 6.0.0 each app asks its bundler — esbuild's metafile over the
+  real entry points, `node_modules` excluded — which files its webview
+  bundles emit, and holds every input against the floor globs it
+  declares once in `scripts/webview-perimeter.mts` (shared by the
+  bundler, the lint and the suite). The bundler's own answer replaced
+  the text walk the kit used to ship.
 - `NotFoundError`: the extension keeps a LOCAL variant that forces
   `super('notFound')` because its settings UI matches on that message —
   never "deduplicate" it blindly.
