@@ -24,7 +24,8 @@ workflows.
 - `homey.drivers` and `homey.settings` typed for your app.
 - A changelog announcement that covers the versions a user skipped.
 - Helpers for background work, grouped work and error messages.
-- Test helpers that check your app's API against its manifest.
+- Test helpers that check your app's API against its manifest, and its
+  generated locale files against their sources.
 - Reusable GitHub workflows that validate and publish a Homey app.
 - No dependency: nothing else is installed with it.
 
@@ -120,7 +121,7 @@ export const start = async (homey: HomeyWidget): Promise<void> => {
 | `@olivierzal/homey-kit/manifest` | Readers of the drivers' settings in the app manifest                                          | App                   |
 | `@olivierzal/homey-kit/node`     | The page stamper and the reader of its hashes                                                 | Build script, app     |
 | `@olivierzal/homey-kit/types`    | Types for `homey.drivers` and `homey.settings`                                                | Types only            |
-| `@olivierzal/homey-kit/testing`  | API-contract checks and test helpers                                                          | Tests                 |
+| `@olivierzal/homey-kit/testing`  | API-contract and locale checks, test helpers                                                  | Tests                 |
 
 `fireAndForget`, `homeyApiGet`, `homeyApiPost` and `homeyApiPut` exist
 in two entry points with different signatures: import each from the one
@@ -441,6 +442,36 @@ reads the `.mts` and `.html` files directly in each source directory
 and checks their `homeyApiGet`, `homeyApiPost`, `homeyApiPut`,
 `homeyApiDelete` and `homey.api` calls against the declared routes. The
 last assertion fails when a call escaped the analysis.
+
+### Test the generated locales
+
+The Homey CLI generates `locales/<language>.json` by merging
+`.homeycompose/locales/<language>.json` into the file it finds, and it
+never removes a text. `findLocaleDrift` tells you when the two have come
+apart:
+
+```ts title="tests/unit/locales.test.ts"
+import { findLocaleDrift } from '@olivierzal/homey-kit/testing'
+import { describe, expect, it } from 'vitest'
+
+describe('locales', () => {
+  it('should generate exactly what their sources declare', async () => {
+    await expect(findLocaleDrift('.')).resolves.toStrictEqual([])
+  })
+})
+```
+
+The argument is your app's directory. The result holds one entry per
+language that drifted, each text named by its path (`settings.title`):
+
+| List            | The text                                       | Fix                                                         |
+| --------------- | ---------------------------------------------- | ----------------------------------------------------------- |
+| `generatedOnly` | Is in the generated file and not in its source | Move it to the source, or delete it from the generated file |
+| `sourceOnly`    | Is in the source and not in the generated file | Build the app again                                         |
+| `differing`     | Is worded differently in the generated file    | Build the app again                                         |
+
+A language that has only one of the two files is listed with all its
+texts.
 
 ### Validate and publish with GitHub Actions
 

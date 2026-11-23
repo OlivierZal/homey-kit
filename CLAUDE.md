@@ -139,7 +139,9 @@ The 5.2.0 root helpers entered on the first bar — `announceChangelog`
 and `logSettingsRoute` were verbatim in three apps, `createSettingManager`
 and `settleAll` in two — and `watchWidgetFreshness` on the second (one
 consumer; the shape is the SDK transport's, and it is line for line the
-settings orchestrator with the other transport).
+settings orchestrator with the other transport). `findLocaleDrift`
+(9.2.0) entered on the second too, from the extension's suite: the two
+directories and the merge between them are the Homey CLI's.
 
 ## No dependencies, and no peers either
 
@@ -367,10 +369,10 @@ fenced FIRST for that reason.
   disabled the handshake. A module built to defeat stale caches holds
   no cache of its own (nothing is memoised).
 - The test kernels are analysis SEAMS (`findContractBreach`,
-  `analyzeRouteGuards`); each app declares its own `describe`/`it` over
-  them — suite factories that declared the tests package-side made
-  every consumer test file read as empty (Sonar S2187) and were
-  removed. A kernel change here reaches the apps only through a
+  `analyzeRouteGuards`, `findLocaleDrift`); each app declares its own
+  `describe`/`it` over them — suite factories that declared the tests
+  package-side made every consumer test file read as empty (Sonar S2187)
+  and were removed. A kernel change here reaches the apps only through a
   release + adoption train. The compile-time half of the contract stays
   app-side too: asserting `expectTypeOf<Handler>().toBeFunction()` over
   the surface's handler union typechecks only when every handler is
@@ -381,6 +383,27 @@ fenced FIRST for that reason.
   declares once in `scripts/webview-perimeter.mts` (shared by the
   bundler, the lint and the suite). The bundler's own answer replaced
   the text walk the kit used to ship.
+- `findLocaleDrift` holds an app's generated `locales/*.json` to
+  `.homeycompose/locales/*.json`, texts and wordings. The reason is the
+  CLI's `_composeLocales` (read in homey 4.6.3, 2026-11-23): it loads
+  the generated file FIRST and deep-merges each source into it, so a
+  build adds and overwrites and never removes, and it writes a generated
+  file only for a language a source names. A text written in the
+  generated file alone therefore survives every build until the file is
+  generated afresh, a text the source dropped keeps shipping, and a
+  language whose source is deleted keeps its file. The kernel compares
+  whole-language files: the CLI's namespaced sources
+  (`en.<section>.json`, placed under that property) and its `$`-prefixed
+  sections (`$app`, `$capabilities`, `$drivers`, `$flow`, `$widgets`:
+  moved into the manifest and deleted from the locale) are NOT composed,
+  no app uses either, and both read as drift — extend the kernel before
+  an app adopts one. It throws on a directory without a locale source,
+  where a comparison of nothing would pass. Left app-side on purpose:
+  "every language has English's texts" is an app's policy, not the
+  platform's (com.melcloud types its locales after the English source,
+  so a missing text fails to compile, and six of its languages rightly
+  carry plural categories English lacks: `few`, `many`, `two`), and so
+  is the list of texts an app's own sources push.
 - `NotFoundError`: the extension keeps a LOCAL variant that forces
   `super('notFound')` because its settings UI matches on that message —
   never "deduplicate" it blindly.

@@ -1,0 +1,1 @@
+Not a locale: the Homey CLI composes the `.json` files only.
