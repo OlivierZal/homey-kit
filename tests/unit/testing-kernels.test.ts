@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   analyzeRouteGuards,
   findContractBreach,
+  findLocaleDrift,
 } from '../../src/testing/index.ts'
 
 const fixturePath = (relative: string): string =>
@@ -42,6 +43,14 @@ describe('clean kernel fixture', () => {
 
   it('should read the exposed handlers as matching their manifest', () => {
     expect(findContractBreach(CLEAN_CONTRACT_SURFACE)).toBeNull()
+  })
+
+  // The generated files hold their texts in another order than their
+  // sources, beside a file that is no locale: neither is drift.
+  it('should read generated locales as what their sources declare', async () => {
+    await expect(
+      findLocaleDrift(fixturePath('locales-clean')),
+    ).resolves.toStrictEqual([])
   })
 })
 
@@ -123,5 +132,44 @@ describe('contract findings', () => {
       declared: ['getThing', 'updateThing'],
       exposed: ['getThing', 'orphanHandler', 'updateThing'],
     })
+  })
+})
+
+describe('locale drift', () => {
+  // The mutation seam, one language per way a generated file leaves
+  // its source: `da` outlived its source, `en` holds an earlier
+  // wording, a text its source dropped and lacks a text its source
+  // gained, `fr` was never generated, and `sv` is clean.
+  it('should name every text a generated file and its source disagree on', async () => {
+    await expect(
+      findLocaleDrift(fixturePath('locales-drifted')),
+    ).resolves.toStrictEqual([
+      {
+        differing: [],
+        generatedOnly: ['settings.title'],
+        language: 'da',
+        sourceOnly: [],
+      },
+      {
+        differing: ['settings.title'],
+        generatedOnly: ['settings.legacy'],
+        language: 'en',
+        sourceOnly: ['log.reverted'],
+      },
+      {
+        differing: [],
+        generatedOnly: [],
+        language: 'fr',
+        sourceOnly: ['settings.title'],
+      },
+    ])
+  })
+
+  // A comparison of nothing would pass: an app directory without a
+  // locale source is a wrong directory, not a clean app.
+  it('should throw on an app that declares no locale source', async () => {
+    await expect(
+      findLocaleDrift(fixturePath('locales-unsourced')),
+    ).rejects.toThrow(/no locale source to compare/v)
   })
 })
