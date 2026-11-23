@@ -262,6 +262,29 @@ go-to-definition land on real source.
   17 the `v` ban stops being derivable, at 17.4 the whole es2023 floor
   does), and fails the run on an empty or unreadable answer. The shapes
   are pinned in `tests/unit/homey-workflows.test.ts`.
+- **The store path judges its commit (10.0.0)**.
+  `reusable-homey-publish.yml` installed, handed the tree to Athom's
+  action and checked the bundles afterwards: nothing looked at the
+  commit, as nothing did in the libraries' publish job until configs
+  9.0.0. It now starts on the same guard, `check-release.sh`, read out
+  of the `@olivierzal/configs` each app installs: the latest run of the
+  app's `ci.yml`, of the default branch itself, for the commit of the
+  release or of the dispatched run, must have succeeded, and a run still
+  going or not listed yet is waited for, eight minutes at the most
+  (configs' CLAUDE.md holds the rule and what was measured). Measured
+  before it went in, 2026-11-23: the three apps have only ever published
+  from a `v*` tag (73, 22 and 36 runs) or from a run dispatched on
+  `main` (6, 1 and 1), so the guard refuses no path they use. It asks
+  for no grant (the runs of a public repository are read without
+  `actions: read`), and it is a major all the same: an app that calls it
+  must install configs 9.0.0 or later, or the step dies on a script that
+  is not there, before anything is uploaded. The step is release-only
+  like the rest of the job: its shape is pinned in
+  `tests/unit/homey-workflows.test.ts`, which also holds the script's
+  path to the package this repository installs, and the script itself is
+  proven in configs (its suite, its rehearsal, and each library's docs
+  dry run, whose token holds what this job's holds: `contents: read` and
+  `packages: read`).
 - **The build's page is read off the publish log (9.1.0)**. A store
   release is published from its BUILD's page, and Athom's publish
   action outputs the app's page alone; the Homey CLI it runs names the

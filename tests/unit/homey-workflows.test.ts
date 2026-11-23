@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import {
   chmodSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -122,6 +123,41 @@ describe('reusable-homey-publish.yml', () => {
       contents: 'read',
       packages: 'read',
     })
+  })
+
+  // Nothing is uploaded before the commit is judged, and nothing
+  // softens the verdict: the guard is the first command of the job,
+  // right after the install its script is read from, and the step holds
+  // an environment and that one call, with neither a condition nor a
+  // tolerated failure. The script is configs' own, so the path is held
+  // to the package this repository installs.
+  it('should judge the commit before it uploads anything', () => {
+    const steps = stepsOf('reusable-homey-publish.yml', 'publish')
+    const index = steps.findIndex(({ run }) => run !== undefined)
+    const guard = asRecord(steps[index], 'the guard step')
+    const env = asRecord(guard.env, 'guard env')
+    const script = 'node_modules/@olivierzal/configs/scripts/check-release.sh'
+
+    expect(steps[index - 1]?.uses).toMatch(/\/setup-node-and-install$/v)
+    expect(Object.keys(guard)).toStrictEqual(['env', 'run'])
+    expect(guard.run).toBe(`bash ${script}`)
+    expect(existsSync(path.join(REPO_ROOT, script))).toBe(true)
+    expect(Object.keys(env)).toStrictEqual([
+      'DEFAULT_BRANCH',
+      'GITHUB_TOKEN',
+      'HEAD_SHA',
+      'IS_PRERELEASE',
+      'THIS_REPO',
+    ])
+    expect(env.DEFAULT_BRANCH).toMatch(
+      /^\$\{\{ github\.event\.repository\.default_branch \}\}$/v,
+    )
+    expect(env.GITHUB_TOKEN).toMatch(/^\$\{\{ secrets\.GITHUB_TOKEN \}\}$/v)
+    expect(env.HEAD_SHA).toMatch(/^\$\{\{ github\.sha \}\}$/v)
+    expect(env.IS_PRERELEASE).toMatch(
+      /^\$\{\{ github\.event\.release\.prerelease \}\}$/v,
+    )
+    expect(env.THIS_REPO).toMatch(/^\$\{\{ github\.repository \}\}$/v)
   })
 
   // The inputs reach the assertion through the environment, never
