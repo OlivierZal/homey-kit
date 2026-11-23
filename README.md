@@ -85,6 +85,29 @@ Bundle the module and call `start(homey)` from the page's
 `watchSettingsFreshness` resolves to `false` until the page is stamped
 (see "Keep cached pages fresh").
 
+A widget does the same from `@olivierzal/homey-kit/widget`, names its
+own entry and gives `runWebview` its height:
+
+```ts title="widgets/charts/public/index.mts"
+import type HomeyWidget from 'homey/lib/HomeyWidget.js'
+import { runWebview, surfaceError } from '@olivierzal/homey-kit/webview'
+import { homeyApiGet, watchWidgetFreshness } from '@olivierzal/homey-kit/widget'
+
+const init = async (homey: HomeyWidget): Promise<void> => {
+  if (await watchWidgetFreshness(homey, 'charts')) {
+    return
+  }
+  document.body.textContent = await homeyApiGet<string>(homey, '/name')
+}
+
+export const start = async (homey: HomeyWidget): Promise<void> => {
+  await runWebview(homey, init(homey), {
+    height: () => document.body.scrollHeight,
+    onError: surfaceError,
+  })
+}
+```
+
 ## Usage
 
 | Import                           | What it gives                                                                                 | Runs in               |
@@ -197,12 +220,29 @@ local `href` and `src` of each page and writes `webview-hashes.json`.
 It does nothing when none of the pages exists, and rejects when only
 some exist or one has no local reference.
 
-Then declare two routes, in the app manifest for the settings page and
-in each widget's manifest for that widget: `GET /webview-hashes`, which
-returns `getWebviewHashes(new URL('webview-hashes.json', import.meta.url))`
-(from a module at the app's root), and `POST /boot-error`, which receives
-`{ message, name: 'WebviewFreshness' }` when a page finds itself
-outdated.
+Then give the pages two routes, in the app's API for the settings page
+and in each widget's API for that widget:
+
+```ts title="api.mts"
+import type { Homey } from 'homey'
+import { getWebviewHashes } from '@olivierzal/homey-kit/node'
+
+const api = {
+  getWebviewHashes: async (): Promise<Partial<Record<string, string>>> =>
+    getWebviewHashes(new URL('webview-hashes.json', import.meta.url)),
+  logWebviewBoot: ({ body, homey }: { body: unknown; homey: Homey }): void => {
+    homey.app.error('Page boot failed:', JSON.stringify(body))
+  },
+}
+
+export default api
+```
+
+Declare them as `GET /webview-hashes` and `POST /boot-error`, in the
+app manifest and in each widget's manifest. The `URL` is relative to
+the module that builds it, here one at the app's root. The second route
+receives `{ message, name: 'WebviewFreshness' }` when a page finds
+itself outdated.
 
 Finally, start a settings page with `watchSettingsFreshness(homey)`, as
 the quick start does, or a widget with
@@ -241,11 +281,21 @@ language asked for, else in English.
 device, keeps in `merged` the values the devices agree on and sets the
 others to `null`.
 
-### Typing the Homey instance
+### Type the Homey instance
 
 With the Homey SDK types 1.x, `homey.app` is typed once your app
-declares
-`declare module 'homey' { interface HomeyTypes { app: MyApp } }`.
+declares this:
+
+```ts title="homey-override.d.ts"
+import type MyApp from './app.mts'
+
+declare module 'homey' {
+  interface HomeyTypes {
+    app: MyApp
+  }
+}
+```
+
 `homey.drivers` and `homey.settings` are narrowed in your app, with the
 member signatures of `@olivierzal/homey-kit/types`:
 
@@ -282,12 +332,33 @@ only the narrowed members from the generic. Your app class then
 declares `declare public readonly homey: MyHomey`, and a driver or a
 device reaches the typed managers through `this.homey.app.homey`.
 
-`homey.settings` now accepts your setting keys only. For an API library
-that stores its session under plain string keys (the `settingManager`
-of `@olivierzal/melcloud-api` and `@olivierzal/heatzy-api`),
-`createSettingManager(this.homey.settings, settingKey)` adapts it.
-`settingKey`, your `(key: string) => keyof HomeySettings`, is required,
-and a stored value that is not a string reads as absent.
+### Store an API library's session in the app settings
+
+Once narrowed, `homey.settings` accepts your setting keys only, and an
+API library stores its session under plain string keys (the
+`settingManager` of `@olivierzal/melcloud-api` and
+`@olivierzal/heatzy-api`). `createSettingManager` adapts one to the
+other:
+
+```ts title="lib/setting-manager.mts"
+import {
+  type SettingManager,
+  createSettingManager,
+} from '@olivierzal/homey-kit'
+
+import type { HomeySettings } from '../types/app-settings.mts'
+import type { ManagerSettings } from '../types/homey.mts'
+
+// The one place where a key of the library becomes one of yours
+const settingKey = (key: string): keyof HomeySettings =>
+  key as keyof HomeySettings
+
+export const toSettingManager = (settings: ManagerSettings): SettingManager =>
+  createSettingManager(settings, settingKey)
+```
+
+`settingKey` is required: prefix the key there when two API clients
+share the store. A stored value that is not a string reads as absent.
 
 ### Announce the changelog
 
