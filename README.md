@@ -1,11 +1,11 @@
 # @olivierzal/homey-kit
 
-Shared Homey runtime for the OlivierZal apps: the webview kit
-(dirty-gate, freshness handshake), the settings transport, common
-helpers and the table-driven test kernels.
+Shared building blocks for the OlivierZal Homey apps: helpers for
+settings pages, widgets, app code and tests, and reusable GitHub
+workflows.
 
-[![License](https://img.shields.io/github/license/OlivierZal/homey-kit)](LICENSE)
-[![Node](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FOlivierZal%2Fhomey-kit%2Fmain%2Fpackage.json&query=%24.engines.node&label=node&color=brightgreen)](package.json)
+[![License](https://img.shields.io/github/license/OlivierZal/homey-kit)](https://github.com/OlivierZal/homey-kit/blob/main/LICENSE)
+[![Node](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FOlivierZal%2Fhomey-kit%2Fmain%2Fpackage.json&query=%24.engines.node&label=node&color=brightgreen)](https://github.com/OlivierZal/homey-kit/blob/main/package.json)
 [![GitHub release](https://img.shields.io/github/v/release/OlivierZal/homey-kit?sort=semver)](https://github.com/OlivierZal/homey-kit/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/OlivierZal/homey-kit/ci.yml?branch=main&label=CI)](https://github.com/OlivierZal/homey-kit/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/OlivierZal/homey-kit/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/OlivierZal/homey-kit/security/code-scanning)
@@ -14,189 +14,240 @@ helpers and the table-driven test kernels.
 [![Test coverage](https://sonarcloud.io/api/project_badges/measure?project=OlivierZal_homey-kit&metric=coverage)](https://sonarcloud.io/component_measures?id=OlivierZal_homey-kit&metric=coverage)
 [![Docs coverage](https://olivierzal.github.io/homey-kit/coverage.svg)](https://olivierzal.github.io/homey-kit/)
 
-## Install
+## Features
 
-The package lives on GitHub Packages:
+- Settings pages and widgets that always end Homey's loading overlay.
+- Promise-based calls to your app's API from a page or a widget.
+- Form-control builders and an Apply-button gate.
+- Cached pages that reload themselves once after an app update.
+- Manifest readers for a driver's settings and login form.
+- `homey.drivers` and `homey.settings` typed for your app.
+- A changelog announcement that covers the versions a user skipped.
+- Helpers for background work, grouped work and error messages.
+- Test helpers that check your app's API against its manifest.
+- Reusable GitHub workflows that validate and publish a Homey app.
+- No dependency: nothing else is installed with it.
 
-```ini title="npmrc"
+## Requirements
+
+- Node.js `>=22.20.0`, ESM only.
+- A GitHub personal access token with the `read:packages` scope, to
+  install the package.
+- Yours to install, since the package installs nothing else: `vitest`
+  for `@olivierzal/homey-kit/testing`, and the Homey SDK types
+  (`homey-apps-sdk-v3-types`, installed as `@types/homey`) for
+  `@olivierzal/homey-kit/settings`.
+- A bundler for page code. The entry points that run in a page use no
+  JavaScript API newer than ES2023.
+
+## Installation
+
+The package is published to GitHub Packages. Point the `@olivierzal`
+scope at it, with that token in `NODE_AUTH_TOKEN`:
+
+```ini title=".npmrc"
+//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
 @olivierzal:registry=https://npm.pkg.github.com
 ```
 
+Then install the package at an exact version:
+
 ```sh title="install"
-npm install @olivierzal/homey-kit
+npm install --save-exact @olivierzal/homey-kit
 ```
 
-Pin it exactly — adoption of a new version is a reviewed PR, never a
-range.
+## Quick start
 
-## Subpaths
+A settings page that reads one of your app's routes and always opens:
 
-| Import                           | Contents                                                                                                                                                                                                                                                                              |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@olivierzal/homey-kit`          | `fireAndForget` and `settleAll` (+ `Logger`), `sequential`, `getErrorMessage`, `NotFoundError`, `logSettingsRoute` (+ `BreadcrumbLogger`), `createSettingManager` (+ `SettingStore`, `SettingManager`), `announceChangelog` (+ `NOTIFICATION_DELAY_MS`) over `selectChangelogEntries` |
-| `@olivierzal/homey-kit/dom`      | Typed element accessors (`getButton`, `getInput`, …), the Homey form-control builders (`createInput`, `createSelect`, …) and the form-value reader (`parseFormValue`)                                                                                                                 |
-| `@olivierzal/homey-kit/webview`  | The boot cycle (`runWebview`, `withInitTimeout`, `surfaceError`, `fireAndForget`, `trySetDocumentLanguage`), `createDirtyGate` (exclusive arming: baseline or predicate), `watchWebviewFreshness`, `ensureFreshWebview`, `getPageIdentity`                                            |
-| `@olivierzal/homey-kit/settings` | The error-first-callback settings SDK promisified: `homeyCallback`, the one primitive, under `homeyApiGet`/`Post`/`Put`/`Delete` and `homeyConfirm` — and `watchSettingsFreshness`, the settings page's whole freshness handshake in one call                                         |
-| `@olivierzal/homey-kit/widget`   | The promise-native widget SDK typed: `homeyApiGet`/`Post`/`Put` — and `watchWidgetFreshness`, the widget's whole freshness handshake in one call                                                                                                                                      |
-| `@olivierzal/homey-kit/manifest` | `getDriverSettings`, `getDriverLoginSetting`, `mergeDeviceSettings`, `localize` — the manifest read into a settings page                                                                                                                                                              |
-| `@olivierzal/homey-kit/node`     | The two node-side halves of the freshness handshake: `stampPackagedPages` (+ `stampHtml`, `stampReferences`), the package-time `?v=` stamper that emits `webview-hashes.json`, and `getWebviewHashes`, the runtime reader the route serves                                            |
-| `@olivierzal/homey-kit/types`    | `TypedManagerDrivers`, `TypedManagerSettings` — the member signatures an app's typed `Homey` interface narrows the SDK managers with                                                                                                                                                  |
-| `@olivierzal/homey-kit/testing`  | The analysis seams (`findContractBreach`, `analyzeRouteGuards`) and the plain helpers every suite shares (`assertDefined`, `getMockCallArg`, `mock`, `settleDetached`, `InteropModule`) — needs vitest                                                                                |
-
-## The DOM subpath
-
-`./dom` holds what every settings page and widget rebuilds otherwise:
-element accessors that report the two failures separately — an id that is
-absent, and an id that names another kind of element — and the builders
-for Homey's `homey-form-*` controls, which are platform markup rather
-than app design and so belong in one place.
-
-Class names stay caller-supplied. The settings pages pass their
-`homey-form-*` decoration; the widgets pass nothing and style bare
-elements through element selectors. One builder serves both, and neither
-page inherits the other's look:
-
-```ts title="settings"
+```ts title="settings/index.mts"
+import type HomeySettings from 'homey/lib/HomeySettings.js'
 import {
-  createInput,
-  createLabel,
-  getFieldset,
-} from '@olivierzal/homey-kit/dom'
-
-const input = createInput({ className: 'homey-form-input', id, type })
-getFieldset('login').append(createLabel(input, title, 'homey-form-label'))
-```
-
-`parseFormValue` reads by value, not by control: a finite numeric string
-is a number whether it comes from a number input or a select (a
-temperature grid built as a select reads as numbers), so a page whose
-dropdown ids are words on the wire keeps them words — pin the manifest in
-a test rather than the reader. A bounded number input reads the same
-way — its bounds are the page's business (the strategy parameter that
-once served them went in 6.0.0, passed by no app).
-
-Anything tied to one app's domain stays in that app — zone pickers, log
-rows, comboboxes.
-
-## The boot cycle
-
-`./webview` carries the sequence every page runs before it is usable,
-and it exists for one invariant: **the loading overlay always ends**. A
-page that never reaches `Homey.ready()` spins forever, and the user has
-no way to recover but to reinstall.
-
-```ts title="settings page"
+  homeyApiGet,
+  watchSettingsFreshness,
+} from '@olivierzal/homey-kit/settings'
 import { runWebview, surfaceError } from '@olivierzal/homey-kit/webview'
 
-export const start = async (homey: HomeySettings): Promise<void> => {
-  const { error, hasFailed } = await runWebview(homey, init(homey), {
-    timeoutMessage: 'Timed out while loading the settings page',
-  })
-  if (hasFailed) {
-    surfaceError(error)
+const init = async (homey: HomeySettings): Promise<void> => {
+  if (await watchSettingsFreshness(homey)) {
+    return
   }
+  document.body.textContent = await homeyApiGet<string>(homey, '/name')
+}
+
+export const start = async (homey: HomeySettings): Promise<void> => {
+  await runWebview(homey, init(homey), { onError: surfaceError })
 }
 ```
 
-`ready` fires in a `finally`, so a rejecting init, a page that throws
-while building itself, and a transport that never answers all end the
-same way. The deadline **rejects** rather than resolves — a hung fetch
-must surface as an error, not resolve silently into a half-built page —
-and the work is not cancelled, so a late success repaints over the
-degraded state.
+Bundle the module and call `start(homey)` from the page's
+`onHomeyReady`. `/name` stands for a route your app declares, and
+`watchSettingsFreshness` resolves to `false` until the page is stamped
+(see "Keep cached pages fresh").
 
-Where the failure is announced is the caller's choice, and both moments
-are real: `onError` runs before `ready`, for a widget that must paint an
-error at the right size; the returned outcome is read after it, for a
-page that would rather let the overlay close first. Messages are
-parameters, not policy — the settings pages and the widgets name
-themselves differently, and neither should have to accept the other's
-wording to share the cycle.
+## Usage
 
-## The manifest subpath
+| Import                           | What it gives                                                                                 | Runs in               |
+| -------------------------------- | --------------------------------------------------------------------------------------------- | --------------------- |
+| `@olivierzal/homey-kit`          | Background and grouped work, error messages, the changelog announcement, the settings adapter | App and pages         |
+| `@olivierzal/homey-kit/webview`  | Page boot, the Apply gate, the freshness check                                                | Settings page, widget |
+| `@olivierzal/homey-kit/dom`      | Element lookups, form-control builders, the form-value reader                                 | Settings page, widget |
+| `@olivierzal/homey-kit/settings` | App-API calls and the freshness check of a settings page                                      | Settings page         |
+| `@olivierzal/homey-kit/widget`   | App-API calls and the freshness check of a widget                                             | Widget                |
+| `@olivierzal/homey-kit/manifest` | Readers of the drivers' settings in the app manifest                                          | App                   |
+| `@olivierzal/homey-kit/node`     | The page stamper and the reader of its hashes                                                 | Build script, app     |
+| `@olivierzal/homey-kit/types`    | Types for `homey.drivers` and `homey.settings`                                                | Types only            |
+| `@olivierzal/homey-kit/testing`  | API-contract checks and test helpers                                                          | Tests                 |
 
-`./manifest` turns what Homey states in the app manifest — a driver's
-settings, nested in groups and localized, and its pairing login form —
-into the flat list of controls a settings page renders. It is node-side:
-the app reads its own manifest and serves the result to the page.
+`fireAndForget`, `homeyApiGet`, `homeyApiPost` and `homeyApiPut` exist
+in two entry points with different signatures: import each from the one
+that matches where the code runs.
 
-```ts title="app"
+### Boot a page
+
+`runWebview(homey, work, options)` always calls `homey.ready()`: when
+the work resolves, when it rejects, and after 10 seconds when it has
+done neither (the work is not cancelled). A failure does not make it
+reject: it resolves to `{ error, hasFailed }`. The `onError` option
+runs before `ready()`, for a page that paints its error first; read the
+returned outcome instead to report once the overlay has closed. A
+widget passes `height`, a function that returns its height, and
+`ready()` receives it. `surfaceError` reports an error as an uncaught
+error of the page, without throwing where it is called.
+
+### Call the app API
+
+In a settings page, `homeyApiGet`, `homeyApiPost` and `homeyApiPut`
+resolve to the handler's result, `homeyApiDelete` resolves when the
+handler is done, and `homeyConfirm` resolves to whether the user
+confirmed. In a widget, `homeyApiGet` resolves to the handler's result,
+`homeyApiPost` and `homeyApiPut` take an object and resolve to nothing,
+and there is no delete. A call that fails rejects with the error Homey
+reports. A result is typed as you ask and is not validated.
+
+### Gate the Apply button
+
+```ts title="settings/name-form.mts"
+import type HomeySettings from 'homey/lib/HomeySettings.js'
+import { getButton, getFieldset, getInput } from '@olivierzal/homey-kit/dom'
+import { homeyApiPut } from '@olivierzal/homey-kit/settings'
+import { createDirtyGate, fireAndForget } from '@olivierzal/homey-kit/webview'
+
+export const wireNameForm = (homey: HomeySettings): void => {
+  const nameElement = getInput('name')
+  const applyElement = getButton('apply')
+  const gate = createDirtyGate({
+    applyElement,
+    fieldsetElements: [getFieldset('name_form')],
+    serialize: () => nameElement.value,
+  })
+  gate.wire([nameElement])
+  applyElement.addEventListener('click', () => {
+    fireAndForget(
+      gate.runBusy(async () => {
+        await homeyApiPut(homey, '/name', { name: nameElement.value })
+        gate.markSaved()
+      }),
+    )
+  })
+}
+```
+
+Apply is disabled while `serialize()` returns what it returned at the
+last `markSaved()`, or at creation, and while a request is in flight.
+`runBusy` marks a request in flight while its action runs (when calls
+overlap, the latest one ends it), and the fieldsets are disabled
+meanwhile. `wire` re-evaluates on each
+`input` and `change` event of its targets: call `recompute()` after you
+set a field from code. With `isActionable: () => boolean` instead of
+`serialize`, you decide when Apply has something to send.
+
+### Build and read form controls
+
+`createInput({ id, type, value })`, `createSelect(id, options)` and
+`createLabel(control, text)` build controls that are not in the
+document yet. Each takes an optional class name, and a select starts
+with an empty option. The element lookups throw a `TypeError` that
+tells a missing id from an id of another kind of element.
+
+`parseFormValue(control)` returns `null` for an empty value, a
+checkbox's checked state (`null` while indeterminate), `true` or
+`false` for `'true'` and `'false'`, a number when the value converts to
+a finite number, and the string otherwise. A select is read the same
+way: an option id that looks numeric comes back as a number, so give a
+non-numeric id to an option that must stay a string.
+
+### Keep cached pages fresh
+
+A phone can keep showing a cached settings page or widget after an app
+update. Three steps make an outdated page reload itself once. First,
+stamp the packaged pages from the script that bundles them:
+
+```ts title="scripts/bundle.mts"
+import { stampPackagedPages } from '@olivierzal/homey-kit/node'
+
+await stampPackagedPages('.homeybuild', [
+  { entry: 'settings', page: 'settings/index.html' },
+  { entry: 'charts', page: 'widgets/charts/public/index.html' },
+])
+```
+
+In the directory the Homey CLI packs, this adds a `?v=` stamp to every
+local `href` and `src` of each page and writes `webview-hashes.json`.
+It does nothing when none of the pages exists, and rejects when only
+some exist or one has no local reference.
+
+Then declare two routes, in the app manifest for the settings page and
+in each widget's manifest for that widget: `GET /webview-hashes`, which
+returns `getWebviewHashes(new URL('webview-hashes.json', import.meta.url))`
+(from a module at the app's root), and `POST /boot-error`, which receives
+`{ message, name: 'WebviewFreshness' }` when a page finds itself
+outdated.
+
+Finally, start a settings page with `watchSettingsFreshness(homey)`, as
+the quick start does, or a widget with
+`watchWidgetFreshness(homey, 'charts')`, and stop when it resolves to
+`true`: the page is reloading. The settings page is looked up under the
+entry `settings`. The check runs again each time the page becomes
+visible. It resolves to `false` when it cannot conclude (an unstamped
+page, an unknown entry, a failing route) or cannot reload safely
+(blocked storage).
+
+### Read the manifest into settings controls
+
+```ts title="lib/driver-settings.mts"
+import type { Homey } from 'homey'
 import {
+  type DriverSetting,
   getDriverLoginSetting,
   getDriverSettings,
 } from '@olivierzal/homey-kit/manifest'
 
-const language = this.homey.i18n.getLanguage()
-const settings = (this.homey.manifest.drivers ?? []).flatMap((driver) => [
-  ...getDriverSettings(driver, language),
-  ...getDriverLoginSetting(driver, language),
-])
-```
-
-The manifest types here describe only the fields that are read, in the
-shapes Homey's manifest schema gives them, so the SDK's own
-`DriverManifest` — what `this.homey.manifest.drivers` holds since the SDK
-types 1.x — passes straight through, and so does any richer app type;
-`tests/types/manifest-inputs.ts` pins the assignability. Naming no SDK
-type is what lets the package keep no peers. The shapes are the schema's:
-a group is what holds `children` (groups nest, and a control carries the
-innermost one), a control may sit outside any group, a setting `id` may
-be a number (served as a string), `name`, `label` and `units` are plain
-or keyed by language, and a login step's `options` are untyped values of
-which only the `*Label`/`*Placeholder` entries holding a string, plain or
-keyed, become controls (`logo`, a file path, sits beside them).
-
-`localize` throws on a keyed string without `en`: the schema requires it,
-so a validated manifest always carries it and a miss is a contract break
-in the manifest — loud, never a blank label.
-
-`mergeDeviceSettings` folds several devices' stored values into the one
-value a grouped control shows: a setting they disagree on collapses to
-`null` while the settings they agree on keep folding independently.
-
-## No dependencies, and no peers either
-
-This package declares nothing — no `dependencies`, no
-`peerDependencies`, optional or not. The apps install it as a
-production dependency, so anything it named would ship to the device;
-the two subpaths that need an outside package (`./testing` wants
-`vitest`, `./settings` wants the `homey` types) import what every
-consumer already has as a devDependency, and a missing one fails
-loudly at its own call site. The full reasoning and the incident
-behind it live in `CLAUDE.md`.
-
-## Typing the Homey instance
-
-Since the SDK types 1.x, `homey` exports the `Homey` class by name
-(`import type { Homey } from 'homey'` is a legal import) and offers one
-augmentation seam, `HomeyTypes`, which types `homey.app`. Module
-augmentation cannot ship in a package, so each app keeps a local
-override file — seven lines:
-
-```ts title="homey-override.d.ts"
-import type MyApp from './app.mts'
-
-declare module 'homey' {
-  interface HomeyTypes {
-    app: MyApp
-  }
+export const listDriverSettings = (homey: Homey): DriverSetting[] => {
+  const language = homey.i18n.getLanguage()
+  return (homey.manifest.drivers ?? []).flatMap((driver) => [
+    ...getDriverSettings(driver, language),
+    ...getDriverLoginSetting(driver, language),
+  ])
 }
 ```
 
-The 0.3.x block — `declare module 'homey' { interface Homey extends
-HomeyLib { … } }` — is no longer a seam. `Homey` is now the SDK class
-itself, so that interface names the class as its own base (TS2310) and
-every member it re-types collides with the class's own declaration
-(TS2717); inside a `.d.ts` under `skipLibCheck`, which is every app's
-override file, those errors are not even reported, and nothing in the
-block narrows anything (measured 2026-11-04 against 1.8.3). Delete it.
+`getDriverSettings` returns one `DriverSetting` per control a driver
+declares, each with the `groupId` and `groupLabel` of the innermost
+group it sits in. `getDriverLoginSetting` returns the `username` and
+`password` controls of the `login` pairing step. Labels come in the
+language asked for, else in English.
+`mergeDeviceSettings(merged, device.getSettings())`, called for each
+device, keeps in `merged` the values the devices agree on and sets the
+others to `null`.
 
-`HomeyTypes` carries `app` only — narrowing `drivers` and `settings`
-through it is asked of Athom (point 7 of the family's 1.7.0 verdict,
-still open). Until then the narrowed managers live in an app-level
-interface that extends the SDK class and takes its member SIGNATURES
-from the generics here; the SDK's manager classes supply everything
-else:
+### Typing the Homey instance
+
+With the Homey SDK types 1.x, `homey.app` is typed once your app
+declares
+`declare module 'homey' { interface HomeyTypes { app: MyApp } }`.
+`homey.drivers` and `homey.settings` are narrowed in your app, with the
+member signatures of `@olivierzal/homey-kit/types`:
 
 ```ts title="types/homey.mts"
 import type {
@@ -226,281 +277,107 @@ export interface MyHomey extends Homey {
 }
 ```
 
-```ts title="app"
-export default class MyApp extends App {
-  declare public readonly homey: MyHomey
+Keep that shape: each interface extends the SDK's manager and takes
+only the narrowed members from the generic. Your app class then
+declares `declare public readonly homey: MyHomey`, and a driver or a
+device reaches the typed managers through `this.homey.app.homey`.
+
+`homey.settings` now accepts your setting keys only. For an API library
+that stores its session under plain string keys (the `settingManager`
+of `@olivierzal/melcloud-api` and `@olivierzal/heatzy-api`),
+`createSettingManager(this.homey.settings, settingKey)` adapts it.
+`settingKey`, your `(key: string) => keyof HomeySettings`, is required,
+and a stored value that is not a string reads as absent.
+
+### Announce the changelog
+
+```ts title="app.mts"
+import { announceChangelog } from '@olivierzal/homey-kit'
+import Homey from 'homey'
+
+import changelog from './.homeychangelog.json' with { type: 'json' }
+
+export default class MyApp extends Homey.App {
+  public override onInit(): void {
+    announceChangelog({
+      changelog,
+      homey: this.homey,
+      language: this.homey.i18n.getLanguage(),
+      notifications: this.homey.notifications,
+      settings: this.homey.settings,
+      version: this.homey.manifest.version,
+    })
+  }
 }
 ```
 
-Only the app class re-declares `homey`: a driver or a device already
-sees the app typed through `this.homey.app` — that is what `HomeyTypes`
-does — and reaches the typed managers through it.
+It posts one notification per version newer than the one stored under
+the `notifiedVersion` setting, oldest first and at most the five
+newest, 10 seconds after the call. A first install announces the
+running version only. An excerpt comes in the language given, else in
+English. `notifiedVersion` is updated once all are posted: if one
+fails, the next start tries again.
 
-`interface ManagerDrivers extends TypedManagerDrivers<MyDriver> {}` is a
-trap, measured on two apps: without the SDK class as its base the
-interface loses `getDriver`, `log`, `error` and the rest; adding both
-parents makes each declare `getDrivers`, and TypeScript resolves the
-conflict **silently** towards the SDK's wide type — `getDrivers()` hands
-back `Driver`s where the app expects `MyDriver`s, with no error
-anywhere. Picking the members keeps one declaration site per member, so
-a future divergence is a compile error rather than a silent widening.
+### Run background work and log routes
 
-`TypedManagerSettings` takes the app's keys and nothing else — there is
-no `(key: string)` overload. An app that must address settings
-dynamically, to satisfy an outside interface imposing `key: string`,
-narrows at that one boundary:
+`fireAndForget`, `settleAll` and `logSettingsRoute` come from
+`@olivierzal/homey-kit`. An app, a driver or a device passes itself as
+the logger:
+`fireAndForget(promise, this, 'Sync failed:')` returns at once and logs
+a rejection with `this.error`, and
+`settleAll(promises, this, 'Sync failed:')` waits for every promise,
+logs each rejection the same way and never rejects. In an API handler,
+`logSettingsRoute(homey.app, 'GET /settings/drivers')` leaves in the
+app log which route a settings page called.
 
-```ts title="adapter"
-const settingKey = (key: string): keyof HomeySettings =>
-  key as keyof HomeySettings
-```
+### Test the API contract
 
-The knowledge lives there and nowhere else: only the adapter knows the
-keys it forwards are real. A global escape hatch would spend that one
-narrowing across every call site in the app, and a typo would read
-`undefined` at runtime instead of failing to compile.
+The package gives the comparisons; you declare the tests, with `vitest`:
 
-The adapter itself is the kit's: `createSettingManager` turns the typed
-`homey.settings` into the plain-string `SettingManager` an API library
-persists its session through, coercing a non-string read to "absent"
-the way the library expects. The mapper is the app's — a prefix, or the
-bare narrowing above — and there is no identity default, because a
-store keyed by `string` would be exactly the escape hatch the typed
-`ManagerSettings` refuses:
-
-```ts title="app"
-import { createSettingManager } from '@olivierzal/homey-kit'
-
-const settingManager = createSettingManager(this.homey.settings, settingKey)
-```
-
-## The app-side seams
-
-Three helpers take the app instance itself, structurally — anything
-with the one method each needs fits:
-
-- `fireAndForget(promise, logger, message)` detaches already-started
-  work and logs its rejection instead of propagating it.
-- `settleAll(promises, logger, message)` settles independent branches
-  together and logs each rejection on its own, where `Promise.all` would
-  abandon the rest at the first failure and hide every reason but one.
-  Both take a `Logger` (an `error` method).
-- `logSettingsRoute(logger, route)` leaves the settings page's
-  breadcrumb — `{ dataType: 'Settings page', route }` — in the app log,
-  where the page is otherwise invisible in a diagnostic report. It takes
-  a `BreadcrumbLogger` (a `log` method); label the route `METHOD /path`.
-
-## Wiring the test kernels
-
-Each app keeps its tables **and its own `describe`/`it` blocks** — a
-test file that declares no test reads as empty to Sonar and to any
-reader — while the comparisons stay single-sourced here:
-
-```ts title="tests"
+```ts title="tests/unit/api.test.ts"
 import {
   analyzeRouteGuards,
   findContractBreach,
 } from '@olivierzal/homey-kit/testing'
+import { describe, expect, it } from 'vitest'
 
-it.each(SURFACES)('$name declares exactly its handlers', (surface) => {
-  expect(findContractBreach(surface)).toBeNull()
-})
+import config from '../../.homeycompose/app.json' with { type: 'json' }
+import api from '../../api.mts'
 
-it('declares every path its webview sources call', async () => {
-  const findings = await analyzeRouteGuards({
-    manifest: '.homeycompose/app.json',
-    name: 'settings',
-    sourceDirs: ['settings'],
+describe('app API', () => {
+  it('should declare exactly the handlers its manifest names', () => {
+    expect(findContractBreach({ api, config, name: 'app API' })).toBeNull()
   })
 
-  expect(findings.undeclaredPaths).toStrictEqual([])
+  it('should call only declared routes from the settings page', async () => {
+    const findings = await analyzeRouteGuards({
+      manifest: '.homeycompose/app.json',
+      name: 'settings',
+      sourceDirs: ['settings'],
+    })
+    const { accountedCallSites, parsedOrIndirectCalls } = findings
+    expect(findings.undeclaredPaths).toStrictEqual([])
+    expect(findings.undeclaredMethodCalls).toStrictEqual([])
+    expect(findings.undeclaredTemplateCalls).toStrictEqual([])
+    expect(parsedOrIndirectCalls).toBeGreaterThanOrEqual(accountedCallSites)
+  })
 })
 ```
 
-The compile-time half of the contract stays app-side too: asserting
-`expectTypeOf<Handler>().toBeFunction()` over the surface's handler
-union typechecks only when every handler is callable.
+`findContractBreach` returns `null` when the handlers your API module
+exports are exactly the ids its manifest declares. `analyzeRouteGuards`
+reads the `.mts` and `.html` files directly in each source directory
+and checks their `homeyApiGet`, `homeyApiPost`, `homeyApiPut`,
+`homeyApiDelete` and `homey.api` calls against the declared routes. The
+last assertion fails when a call escaped the analysis.
 
-The webview-floor closure is NOT a kit kernel any more: since 6.0.0
-each app asks its bundler — esbuild's metafile over the real entry
-points, `node_modules` excluded — which files its webview bundles emit,
-and holds every input against the floor globs it declares once in
-`scripts/webview-perimeter.mts` (shared by the bundler, the lint and
-the suite). The bundler's own answer replaced the text walk the kit
-used to ship.
+### Validate and publish with GitHub Actions
 
-The plain helpers (`assertDefined`, `getMockCallArg`, `mock`,
-`settleDetached`, the `InteropModule` shape) come from the same subpath,
-so no app keeps a `tests/helpers.ts` copy of them.
-
-## Wiring the freshness handshake
-
-The stamps come first, at package time: the bundler script stamps every
-packaged page's local references with a content hash and emits the
-manifest beside them. Only the packaging copy is touched — the
-committed HTML stays unstamped — and the manifest is written only when
-every page copy exists: a standalone suite run (no copies) stamps
-nothing and writes none, a partial tree gets its present pages stamped
-and no manifest:
-
-```ts title="scripts/bundle"
-import { stampPackagedPages } from '@olivierzal/homey-kit/node'
-
-// `false` only outside the CLI flow (no page copy: nothing to do); a
-// partial tree throws — the pass fails rather than ships without a manifest.
-await stampPackagedPages(OUT_ROOT, [
-  { entry: 'settings', page: 'settings/index.html' },
-  { entry: 'charts', page: 'widgets/charts/public/index.html' },
-])
-```
-
-The manifest URL is required: it sits where the app's own bundler
-stamped it, which no path relative to this package can reach. Bind it
-once, app-side, and serve it from the route the pages call:
-
-```ts title="lib/webview-hashes"
-import { getWebviewHashes } from '@olivierzal/homey-kit/node'
-
-const MANIFEST_URL = new URL('../webview-hashes.json', import.meta.url)
-
-export const readWebviewHashes = async (): Promise<
-  Partial<Record<string, string>>
-> => getWebviewHashes(MANIFEST_URL)
-```
-
-A settings page wires the whole handshake in one call: the `settings`
-entry, the `GET /webview-hashes` route and the `POST /boot-error`
-breadcrumb channel are the same in every app, so
-`watchSettingsFreshness` carries them.
-
-```ts title="settings/index"
-if (await watchSettingsFreshness(homey)) {
-  // The document is being replaced: skip this page's own init.
-  return
-}
-```
-
-A widget wires the same handshake under its own entry key, over the
-promise-native widget transport — `watchWidgetFreshness` is the widget
-twin of `watchSettingsFreshness`, the same three routes and the same
-breadcrumb, and the widget SDK instance fits its host type as-is:
-
-```ts title="widgets/charts/public/index"
-import { watchWidgetFreshness } from '@olivierzal/homey-kit/widget'
-
-if (await watchWidgetFreshness(homey, 'charts')) {
-  return
-}
-```
-
-A page that owns other routes wires the primitive underneath,
-`watchWebviewFreshness`, with its own transport and entry key; its
-`report` argument is the diagnostics channel: point it at the app's
-boot-error route so a refetch that is skipped or that fails to heal
-leaves a trace instead of a silently stale page.
-
-The guarantee lives in the boot check; the foreground trigger carries
-it to the one surface where no boot happens — a mobile webview
-surviving an app restart. Why the app's `webview_hashes_changed` poke
-could not carry it (measured on-device, removed in 6.0.0) is maintainer
-doctrine, in `CLAUDE.md`.
-
-Everything the caller hands over is fenced: a `report` that throws, a
-rejecting `fetchHashes`, an unregistrable listener or a detached
-document all degrade the self-heal and never stop the page from
-booting.
-
-`ensureFreshWebview` stays exported as the single-check primitive under
-`watchWebviewFreshness`, for a page that owns its own triggers.
-
-`getPageIdentity()` returns what the page compared — the document-order
-join of its `?v=` stamps. Displaying it answers "am I looking at a
-cached page?" at a glance, which the app version cannot: phone webviews
-cache assets across app versions, so the version on screen says nothing
-about the bundle behind it.
-
-## Announcing skipped versions
-
-An app notifies the changelog on boot and stores the version it
-announced. Selecting only the running version means a user who updates
-rarely never hears about the releases in between, so the announcement
-walks the stored version up to the running one. `announceChangelog` is
-the whole wiring in one call: it reads `notifiedVersion`, selects,
-posts each excerpt in order after a ten-second delay (the restart's own
-churn has settled by then), and records the running version once every
-excerpt posted — a failed post leaves it unrecorded, so the next boot
-tries again. Pass the Homey instance as the scheduler: its `setTimeout`
-is `this`-bound and disposed at uninit, which a bare reference would
-lose.
-
-```ts title="app"
-import { announceChangelog } from '@olivierzal/homey-kit'
-
-announceChangelog({
-  changelog,
-  homey: this.homey,
-  language: this.homey.i18n.getLanguage(),
-  notifications: this.homey.notifications,
-  settings: this.homey.settings,
-  version: this.homey.manifest.version,
-})
-```
-
-The host halves are structural, so the app's typed `homey.settings`
-fits without widening its keys. A suite advancing fake timers imports
-`NOTIFICATION_DELAY_MS` rather than restating the figure.
-
-`selectChangelogEntries` stays public underneath, for an app that owns
-the delivery:
-
-```ts title="app"
-const { entries } = selectChangelogEntries({
-  changelog,
-  from: this.homey.settings.get('notifiedVersion'),
-  language: this.homey.i18n.getLanguage(),
-  to: this.homey.manifest.version,
-})
-```
-
-`entries` is chronological — announce it in that order. A first install
-(no readable `from`) yields only the running version, never the whole
-history; a downgrade yields nothing. Each version falls back to English
-when the user's language is missing, and a version translated into
-neither drops out of the series instead of ending it. Beyond five
-versions only the most recent five are returned; the older ones are
-dropped (8.0.0 removed the `omitted` count nothing ever read).
-
-## Workflows
-
-Since 6.1.0 this package also ships the Homey apps' process, as
-reusable workflows the three apps call by SHA with the release tag as
-the version comment — the same tag as the npm pin, one version for both
-channels, which configs' `check-pins.sh` polices exactly as it does for
-`@olivierzal/configs`:
-
-- `reusable-homey-validate.yml` — the family's install action, then
-  Athom's validator at publish level; runs on every app pull request.
-- `reusable-homey-publish.yml` — the store release from the `homey`
-  environment, then the assertion that the packaged bundles the CLI's
-  post-copy build must emit are there; takes `bundles` (one path per
-  line) and `stamped-page`, and the `HOMEY_PAT` secret.
-- `reusable-homey-build-link.yml` — called after the publish job, reads
-  the page of the build it uploaded off that job's log, where the Homey
-  CLI names it, prints it in the run's summary and answers it as `url`;
-  takes the `actions: read` grant. A page it cannot read is a warning,
-  not a failed run behind an upload that went through.
-- `ios-floor-watch.yml` — re-reads, monthly and on dispatch, the Homey
-  mobile app's App Store iOS minimum the webview floor is derived from,
-  and opens an issue here on any move.
-
-```yaml title=".github/workflows/validate.yml"
-jobs:
-  validate:
-    permissions:
-      contents: read
-      packages: read
-    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-validate.yml@<sha> # v6.1.0
-```
+| Workflow                        | Inputs                    | Secret      | Output | Permissions to grant               |
+| ------------------------------- | ------------------------- | ----------- | ------ | ---------------------------------- |
+| `reusable-homey-validate.yml`   | None                      | None        | None   | `contents: read`, `packages: read` |
+| `reusable-homey-publish.yml`    | `bundles`, `stamped-page` | `HOMEY_PAT` | None   | `contents: read`, `packages: read` |
+| `reusable-homey-build-link.yml` | None                      | None        | `url`  | `actions: read`                    |
 
 ```yaml title=".github/workflows/publish.yml"
 jobs:
@@ -508,15 +385,59 @@ jobs:
     needs: publish
     permissions:
       actions: read
-    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-build-link.yml@<sha> # v9.1.0
+    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-build-link.yml@<commit sha> # vX.Y.Z
   publish:
     permissions:
       contents: read
       packages: read
     secrets:
       HOMEY_PAT: ${{ secrets.HOMEY_PAT }}
-    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-publish.yml@<sha> # v9.1.0
+    uses: OlivierZal/homey-kit/.github/workflows/reusable-homey-publish.yml@<commit sha> # vX.Y.Z
     with:
       bundles: |
         settings/index.js
+name: Publish app on Homey
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+permissions: {}
 ```
+
+Pin each workflow to the commit of the release you installed, with its
+tag as a comment. Validate takes no input: call it the same way from a
+workflow that runs on pull requests. It installs on Node 22 with
+`npm ci --ignore-scripts`, reading GitHub Packages with the job's
+`GITHUB_TOKEN`, then runs Athom's validator at the `publish` level.
+
+Publish installs the same way, runs in an environment named `homey` and
+uploads a build with `HOMEY_PAT`, your Homey developer token. It then
+fails the run when a file of `bundles` (one path per line) or
+`stamped-page` (default `settings/index.html`), both relative to
+`.homeybuild`, is missing or empty, or when that page is unstamped.
+Build link writes the address of the uploaded build's page, where you
+publish the build, to the run summary. It returns that address as
+`url`: empty, with a warning, when it cannot read it.
+
+## API reference
+
+The generated reference is at <https://olivierzal.github.io/homey-kit/>.
+It documents every export of the nine entry points, including the
+lower-level pieces this page does not show.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Report a problem on the
+[issue tracker](https://github.com/OlivierZal/homey-kit/issues).
+
+## Security
+
+For vulnerability reports, see [SECURITY.md](SECURITY.md).
+
+## Changelog
+
+See the [GitHub release notes](https://github.com/OlivierZal/homey-kit/releases).
+
+## License
+
+[MIT](LICENSE) © Olivier Zalmanski
